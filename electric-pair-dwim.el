@@ -66,6 +66,11 @@ This can be convenient for people who find it easier to hit ) than C-f."
               (bolp))
     (insert " " )))
 
+(setq electric-pair-dwim-lisp-mode
+  '(lisp-mode emacs-lisp-mode lisp-interaction-mode
+              inferior-gauche-mode scheme-mode)
+  )
+
 ;; (defcustom electric-pair-dwim-conditions
 (setq electric-pair-dwim-conditions
   '(((electric-pair-dwim-escapedp) . self)
@@ -74,15 +79,20 @@ This can be convenient for people who find it easier to hit ) than C-f."
     ((and openp (electric-pair-dwim-get-bounds 'region)) . bounds)
     ;; ((and openp (electric-pair-dwim-get-url)) . region);; symbol works better
     ((and openp (electric-pair-dwim-get-bounds 'symbol)) . bounds)
+    ;; for lisp
     ((and openp
           (eq syntax ?\()
+          (memq major-mode electric-pair-dwim-lisp-mode)
           (electric-pair-dwim-get-bounds 'sexp)) . bounds-and-space)
     ((and openp (electric-pair-dwim-get-bounds 'sexp)) . bounds)
     ;; Skip self.
     ((and closep electric-pair-dwim-skip-self
           (eq (char-after) last-command-event)) . skip)
     ;; Insert matching pair.
+    ((and openp
+          (memq major-mode electric-pair-dwim-lisp-mode)) . space-and-pair)
     (openp . pair)
+    ;; self-insert-command is default
     (t . self)
     )
 ;;   "Alist of conditions"
@@ -101,10 +111,13 @@ This can be convenient for people who find it easier to hit ) than C-f."
                               (insert " ")
                               (backward-char 1)))
         (skip . (forward-char 1))
-        (pair . (progn (electric-pair-dwim-smart-insert-space)
-                       (call-interactively 'self-insert-command)
+        (pair . (progn (call-interactively 'self-insert-command)
                        (save-excursion
-                         (insert closer)))))
+                         (insert closer))))
+        (space-and-pair . (progn (electric-pair-dwim-smart-insert-space)
+                                 (call-interactively 'self-insert-command)
+                                 (save-excursion
+                                   (insert closer)))))
 ;;   "Alist of function alias"
   )
 
@@ -185,6 +198,15 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       ;;     ))
       (expect '("a ()" 4)
         (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert "a")
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (call-interactively 'electric-pair-dwim-post-command-function)
+          (list (buffer-string) (point))
+          ))
+      (expect '("a()" 3)
+        (with-temp-buffer
           (insert "a")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
@@ -240,8 +262,18 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (electric-pair-dwim-post-command-function)
           (buffer-string)
           ))
+      (expect "((word))"
+        (with-temp-buffer
+          (save-excursion
+            (insert "(word)"))
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (electric-pair-dwim-post-command-function)
+          (buffer-string)
+          ))
       (expect "( (word))"
         (with-temp-buffer
+          (emacs-lisp-mode)
           (save-excursion
             (insert "(word)"))
           (setq last-command-event ?\()
@@ -291,6 +323,16 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ))
       (expect "( \"word\")"
         (with-temp-buffer
+          (emacs-lisp-mode)
+          (save-excursion
+            (insert "\"word\""))
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (electric-pair-dwim-post-command-function)
+          (buffer-string)
+          ))
+      (expect "(\"word\")"
+        (with-temp-buffer
           (save-excursion
             (insert "\"word\""))
           (setq last-command-event ?\()
@@ -316,6 +358,15 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (buffer-string)
           ))
       (expect "\\\\ ()"
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert "\\\\")
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (electric-pair-dwim-post-command-function)
+          (buffer-string)
+          ))
+      (expect "\\\\()"
         (with-temp-buffer
           (insert "\\\\")
           (setq last-command-event ?\()
