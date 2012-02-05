@@ -186,6 +186,13 @@ This can be convenient for people who find it easier to hit ) than C-f."
            (not (eq (get-text-property pos 'face) font-lock-string-face))
        )))
 
+(defun electric-pair-smart-insert-space ()
+  (unless (or (eq (char-syntax (preceding-char)) ? )
+              (eq (char-syntax (preceding-char)) ?\( )
+              (eq (char-syntax (preceding-char)) ?')
+              (bolp))
+    (insert " " )))
+
 ;; (defcustom electric-pair-dwim-pairs
 ;;   '((?\" . ?\"))
 ;;   ;; '(nil)
@@ -221,7 +228,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
      ((setq bounds
             (and openp
                  (or (electric-pair-dwim-get-region)
-                     (electric-pair-dwim-get-bounds-of-url)
+                     ;; (electric-pair-dwim-get-bounds-of-url)
                      (electric-pair-dwim-get-bounds-of-symbol)
                      (electric-pair-dwim-get-bounds-of-sexp)
                      )))
@@ -244,11 +251,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
       (message "skip")
       )
      ((and openp)
-      (unless (or (eq (char-syntax (preceding-char)) ? )
-                  (eq (char-syntax (preceding-char)) ?\( )
-                  (bolp))
-        (insert " " ))
       (message "pair")
+      (electric-pair-smart-insert-space)
       (call-interactively 'self-insert-command)
       (save-excursion
         (insert closer)))
@@ -262,7 +266,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
     ;;            ;; I find it more often preferable not to pair when the
     ;;            ;; same char is next.
     ;;            (eq last-command-event (char-after));; for sexp
-    ;;            (eq last-command-event (char-before (1- (point))))
+    ;;            (eq last-command-event (char-before (1- (point)))) ;; not good
     ;;            ;; I also find it often preferable not to pair next to a word.
     ;;            (eq (char-syntax (following-char)) ?w))) ;; for wrap
     ;;   (save-excursion (insert closer)))
@@ -329,6 +333,15 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (call-interactively 'electric-pair-dwim-post-command-function)
           (list (buffer-string) (point))
           ))
+      (expect '("'()" 3)
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert "'")
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (call-interactively 'electric-pair-dwim-post-command-function)
+          (list (buffer-string) (point))
+          ))
       (expect '("(())" 3)
         ;; (expect '("()" 2)
         (with-temp-buffer
@@ -370,8 +383,30 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ))
       (expect "(http://example.com/index.html)"
         (with-temp-buffer
+          (emacs-lisp-mode)
           (save-excursion
             (insert "http://example.com/index.html"))
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (electric-pair-dwim-post-command-function)
+          (buffer-string)
+          ))
+      (expect "(\"http://example.com/index.html\")"
+        (with-temp-buffer
+      (emacs-lisp-mode)
+          (save-excursion
+            (insert "(http://example.com/index.html)"))
+          (goto-char 2)
+          (setq last-command-event ?\")
+          (call-interactively 'self-insert-command)
+          (electric-pair-dwim-post-command-function)
+          (buffer-string)
+          ))
+      (expect "(\"http://example.com/index.html\")"
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (save-excursion
+            (insert "\"http://example.com/index.html\""))
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
           (electric-pair-dwim-post-command-function)
@@ -444,7 +479,9 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
 
 ;; acp.el
 ;; http://d.hatena.ne.jp/buzztaiki/20061204/1165207521
+;; http://d.hatena.ne.jp/kitokitoki/20090823/p1
 ;; custumizable
+;; auto wrap symbol
 
 ;; pair like comment /**/
 
