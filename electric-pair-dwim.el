@@ -89,6 +89,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
 
 (defcustom electric-pair-dwim-pairs
   '((?\" . ?\"))
+  ;; '(nil)
   "Alist of pairs that should be used regardless of major mode."
   :type '(repeat (cons character character)))
 
@@ -110,18 +111,27 @@ This can be convenient for people who find it easier to hit ) than C-f."
 ;;        (message "n1"))
 
 (defun electric-pair-dwim-wrap-region (beg end opener closer)
-  (goto-char end)
-  (insert closer)
-  (save-excursion
+  (let ((marker (copy-marker end)))
     (goto-char beg)
     (insert opener)
+    (save-excursion
+      (goto-char (marker-position marker))
+      (insert closer)
+      (goto-char beg)
+      (show-paren-function)
+      )
     ))
 
 ;; Electric pairing.
-;; (electric-pair-dwim-mode -1)
-;; (electric-pair-dwim-mode 1)
-;; (electric-pair-mode -1)
-;; (electric-pair-mode 1)
+;; (progn
+;;   (electric-pair-dwim-mode -1)
+;;   (electric-pair-mode 1)
+;;   )
+;; (progn
+;;   (electric-pair-dwim-mode 1)
+;;   (electric-pair-mode -1)
+;;   )
+
 (defun electric-pair-dwim-comment-or-stringp (&optional pos)
   (setq pos (or pos (point)))
   (memq (get-text-property pos 'face)
@@ -139,12 +149,62 @@ This can be convenient for people who find it easier to hit ) than C-f."
     (not (zerop (% (skip-syntax-backward "\\") 2))))
   )
 
+(defun electric-pair-dwim-beginning-of-symbolp (&optional pos)
+  (setq pos (or pos (point)))
+  (eq (car (bounds-of-thing-at-point 'symbol)) pos)
+  )
+
+(defun electric-pair-dwim-get-region ()
+  (and (use-region-p)
+       (if (< (point) (mark))
+           `(,(point) . ,(mark))
+         `(,(mark) . ,(point))))
+  )
+
+(defun electric-pair-dwim-get-bounds (symbol)
+  (let ((bounds
+         (bounds-of-thing-at-point symbol)))
+    (if (eq (car bounds) (point)) bounds nil)
+  ))
+
+(defun electric-pair-dwim-get-bounds-of-symbol ()
+  (electric-pair-dwim-get-bounds 'symbol))
+
+(defun electric-pair-dwim-get-bounds-of-sexp ()
+  (electric-pair-dwim-get-bounds 'sexp))
+
+(defun electric-pair-dwim-get-bounds-of-url ()
+  (electric-pair-dwim-get-bounds 'url))
+
+;; (defun skeleton-pair-dwim-inside-stringp ()
+;;   (nth 3 (parse-partial-sexp (point-min) (point))))
+
+(defun electric-pair-dwim-openp (syntax &optional pos)
+  (setq pos (or pos (point)))
+  (and (not (eq syntax ?\)))
+       (or (eq syntax ?\();; '(?\( ?\" ?\$)
+           (not (eq (get-text-property pos 'face) font-lock-string-face))
+       )))
+
+;; (defcustom electric-pair-dwim-pairs
+;;   '((?\" . ?\"))
+;;   ;; '(nil)
+;;   "Alist of pairs that should be used regardless of major mode."
+;;   :type '(repeat (cons character character)))
+
+(defcustom electric-pair-dwim-conditions
+  '(((electric-pair-dwim-escapedp) . 'skip)
+    (overwrite-mode . 'skip)
+    )
+  "Alist of conditions"
+  )
+
 (defun electric-pair-dwim (syntax)
   ;; FIXME: when inserting the closer, we should maybe use
   ;; self-insert-command, although it may prove tricky running
   ;; post-self-insert-hook recursively, and we wouldn't want to trigger
   ;; blink-matching-open.
-  (let
+  (let*
       ((closer (if (eq syntax ?\()
                    (cdr (or (assq last-command-event electric-pair-dwim-pairs)
                             (aref (syntax-table) last-command-event)))
@@ -153,30 +213,45 @@ This can be convenient for people who find it easier to hit ) than C-f."
                    (cdr (or (assq last-command-event electric-pair-dwim-pairs)
                             (aref (syntax-table) last-command-event)))
                  last-command-event))
-       (pair (if (or (eq syntax ?\() (eq syntax ?\)))
-                 ;; assq is ok?
-                 (cdr (or (assq last-command-event electric-pair-dwim-pairs)
-                          (aref (syntax-table) last-command-event)))
-               last-command-event)))
-    (delete-char -1)
+       (openp (electric-pair-dwim-openp syntax))
+       (closep (not openp))
+       (bounds))
     (cond
      ;; Wrap a pair around the active region.
-     ((and (memq syntax '(?\( ?\" ?\$)) (use-region-p))
-      (if (< (point) (mark)) (exchange-point-and-mark))
-      (electric-pair-dwim-wrap-region (mark) (point) opener closer))
+     ((setq bounds
+            (and openp
+                 (or (electric-pair-dwim-get-region)
+                     (electric-pair-dwim-get-bounds-of-url)
+                     (electric-pair-dwim-get-bounds-of-symbol)
+                     (electric-pair-dwim-get-bounds-of-sexp)
+                     )))
+      (electric-pair-dwim-wrap-region (car bounds)
+                                      (cdr bounds)
+                                      opener closer)
+      (message "region")
+      )
      ;; Backslash-escaped: no pairing, no skipping.
-     ((electric-pair-dwim-escapedp)
-      (call-interactively 'self-insert-command))
+     ((or (electric-pair-dwim-escapedp)
+          overwrite-mode)
+      (call-interactively 'self-insert-command)
+      (message "self")
+      )
      ;; Skip self.
-     ((and (memq syntax '(?\) ?\" ?\$))
+     ((and closep
            electric-pair-dwim-skip-self
            (eq (char-after) last-command-event))
       (forward-char 1)
       (message "skip")
       )
-     ((and (memq syntax '(?\( ?\" ?\$)))
+     ((and openp)
+      (unless (or (eq (char-syntax (preceding-char)) ? )
+                  (eq (char-syntax (preceding-char)) ?\( )
+                  (bolp))
+        (insert " " ))
+      (message "pair")
       (call-interactively 'self-insert-command)
-      (insert closer))
+      (save-excursion
+        (insert closer)))
      (t (call-interactively 'self-insert-command)
         ;; (insert closer)
         (message "t")
@@ -184,13 +259,12 @@ This can be convenient for people who find it easier to hit ) than C-f."
      )
     ;; ;; Insert matching pair.
     ;;  ((not (or (not (memq syntax `(?\( ?\" ?\$)))
-    ;;            overwrite-mode
     ;;            ;; I find it more often preferable not to pair when the
     ;;            ;; same char is next.
-    ;;            (eq last-command-event (char-after))
+    ;;            (eq last-command-event (char-after));; for sexp
     ;;            (eq last-command-event (char-before (1- (point))))
     ;;            ;; I also find it often preferable not to pair next to a word.
-    ;;            (eq (char-syntax (following-char)) ?w)))
+    ;;            (eq (char-syntax (following-char)) ?w))) ;; for wrap
     ;;   (save-excursion (insert closer)))
     ;;  )
   ))
@@ -206,8 +280,10 @@ This can be convenient for people who find it easier to hit ) than C-f."
                          ((rassq last-command-event electric-pair-dwim-pairs)
                           ?\))
                          (t (char-syntax last-command-event)))))))
-    (if (memq syntax '(?\) ?\( ?\" ?\$))
-        (electric-pair-dwim syntax))
+    (cond ((memq syntax '(?\) ?\( ?\" ?\$))
+           (undo-boundary)
+           (delete-backward-char 1)
+           (electric-pair-dwim syntax)))
     ))
 
 ;; post-self-insert-hook is emacs 24 hook
@@ -234,17 +310,37 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
 
 (dont-compile
   (when(fboundp 'expectations)
+    (electric-pair-dwim-mode 1)
+    ;; (transient-mark-mode t)
     (expectations
       (desc "electric-pair-dwim")
-      ;; (expect "(word)"
-      (electric-pair-dwim-mode 1)
-      (transient-mark-mode t)
-      (expect "("
+      ;; (expect '("()" 2) ;; ??
+      ;; (with-temp-buffer
+      ;;     (setq last-command-event ?\()
+      ;;     (call-interactively 'self-insert-command)
+      ;;     (call-interactively 'electric-pair-dwim-post-command-function)
+      ;;     (list (buffer-string) (point))
+      ;;     ))
+      (expect '("a ()" 4)
         (with-temp-buffer
+          (insert "a")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (buffer-string)
+          (call-interactively 'electric-pair-dwim-post-command-function)
+          (list (buffer-string) (point))
           ))
+      (expect '("(())" 3)
+        ;; (expect '("()" 2)
+        (with-temp-buffer
+          (insert "(")
+          (save-excursion
+            (insert ")"))
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (electric-pair-dwim-post-command-function)
+          (list (buffer-string) (point))
+          ))
+      (desc "region")
       (expect "(word)"
         (with-temp-buffer
           (set-mark (point))
@@ -263,6 +359,33 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (electric-pair-dwim-post-command-function)
           (buffer-string)
           ))
+      (expect "((word))"
+        (with-temp-buffer
+          (save-excursion
+            (insert "(word)"))
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (electric-pair-dwim-post-command-function)
+          (buffer-string)
+          ))
+      (expect "(http://example.com/index.html)"
+        (with-temp-buffer
+          (save-excursion
+            (insert "http://example.com/index.html"))
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (electric-pair-dwim-post-command-function)
+          (buffer-string)
+          ))
+      (expect "(\"word\")"
+        (with-temp-buffer
+          (save-excursion
+            (insert "\"word\""))
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (electric-pair-dwim-post-command-function)
+          (buffer-string)
+          ))
       (expect "\"word\""
         (with-temp-buffer
           (set-mark (point))
@@ -270,7 +393,6 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (setq last-command-event ?\")
           (call-interactively 'self-insert-command)
           (electric-pair-dwim-post-command-function)
-          ;; (buffer-substring-no-properties (point-min) (point-max))
           (buffer-string)
           ))
       (expect "\\("
@@ -279,16 +401,14 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
           (electric-pair-dwim-post-command-function)
-          ;; (buffer-substring-no-properties (point-min) (point-max))
           (buffer-string)
           ))
-      (expect "\\\\()"
+      (expect "\\\\ ()"
         (with-temp-buffer
           (insert "\\\\")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
           (electric-pair-dwim-post-command-function)
-          ;; (buffer-substring-no-properties (point-min) (point-max))
           (buffer-string)
           ))
       (expect '("()" 3)
@@ -302,7 +422,31 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ;; (buffer-substring-no-properties (point-min) (point-max))
           (list (buffer-string) (point)))
           ))
-      )))
+      ))
+
+;; https://github.com/jixiuf/joseph-autopair/blob/master/joseph-autopair.el
+;; auto pair with newline
+;; after change functions hook
+;; delete pair
+
+;; http://code.google.com/p/autopair/
+;; auto wrap region
+;; blink
+;; skip white space?
+;; don't pair in comment
+;; skip
+;; escape quote
+
+;; electric-pair-mode
+;; standard for 24
+;; pair from syntax table
+;; auto wrap region
+
+;; acp.el
+;; http://d.hatena.ne.jp/buzztaiki/20061204/1165207521
+;; custumizable
+
+;; pair like comment /**/
 
 (provide 'electric-pair-dwim)
 ;;; electric-pair-dwim.el ends here
