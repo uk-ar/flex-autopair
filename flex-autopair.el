@@ -1,12 +1,12 @@
 ;; Electric pairing.
 
-(defcustom electric-pair-dwim-pairs
+(defcustom flex-autopair-pairs
   '((?\" . ?\"))
   ;; '(nil)
   "Alist of pairs that should be used regardless of major mode."
   :type '(repeat (cons character character)))
 
-(defcustom electric-pair-dwim-skip-self t
+(defcustom flex-autopair-skip-self t
   "If non-nil, skip char instead of inserting a second closing paren.
 When inserting a closing paren character right before the same character,
 just skip that character instead, so that hitting ( followed by ) results
@@ -14,7 +14,7 @@ in \"()\" rather than \"())\".
 This can be convenient for people who find it easier to hit ) than C-f."
   :type 'boolean)
 
-(defun electric-pair-dwim-wrap-region (beg end opener closer)
+(defun flex-autopair-wrap-region (beg end opener closer)
   (let ((marker (copy-marker end)))
     (goto-char beg)
     (insert opener)
@@ -26,7 +26,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
       )
     ))
 
-(defun electric-pair-dwim-comment-or-stringp (&optional pos)
+(defun flex-autopair-comment-or-stringp (&optional pos)
   (setq pos (or pos (point)))
   (memq (get-text-property pos 'face)
         '(font-lock-comment-face font-lock-doc-face
@@ -34,14 +34,14 @@ This can be convenient for people who find it easier to hit ) than C-f."
   ;;(not (memq (char-syntax (following-char)) '(?\" ?\')))
   )
 
-(defun electric-pair-dwim-escapedp (&optional pos)
+(defun flex-autopair-escapedp (&optional pos)
   (setq pos (or pos (point)))
   (save-excursion
     (goto-char pos)
     (not (zerop (% (skip-syntax-backward "\\") 2))))
   )
 
-(defun electric-pair-dwim-get-bounds (symbol)
+(defun flex-autopair-get-bounds (symbol)
   (if (eq symbol 'region)
       (and (use-region-p)
            (if (< (point) (mark))
@@ -55,7 +55,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
           bounds nil)
       )))
 
-(defun electric-pair-dwim-openp (syntax &optional pos)
+(defun flex-autopair-openp (syntax &optional pos)
   (setq pos (if (bobp) 1 (1- (or pos (point)))))
   (and (not (eq syntax ?\)))
        (or (eq syntax ?\();; '(?\( ?\" ?\$)
@@ -63,40 +63,40 @@ This can be convenient for people who find it easier to hit ) than C-f."
            (not (eq (get-text-property pos 'face) 'font-lock-string-face))
        )))
 
-(defun electric-pair-dwim-smart-insert-space ()
+(defun flex-autopair-smart-insert-space ()
   (unless (or (eq (char-syntax (preceding-char)) ? )
               (eq (char-syntax (preceding-char)) ?\( )
               (eq (char-syntax (preceding-char)) ?')
               (bolp))
     (insert " " )))
 
-(setq electric-pair-dwim-lisp-mode
+(setq flex-autopair-lisp-mode
   '(lisp-mode emacs-lisp-mode lisp-interaction-mode
               inferior-gauche-mode scheme-mode)
   )
 
-;; (defcustom electric-pair-dwim-conditions
-(setq electric-pair-dwim-conditions
-  '(((electric-pair-dwim-escapedp) . self)
+;; (defcustom flex-autopair-conditions
+(setq flex-autopair-conditions
+  '(((flex-autopair-escapedp) . self)
     (overwrite-mode . self)
     ;; Wrap a pair.
-    ((and openp (electric-pair-dwim-get-bounds 'region)) . bounds)
-    ;; ((and openp (electric-pair-dwim-get-url)) . region);; symbol works better
-    ((and openp (electric-pair-dwim-get-bounds 'symbol)) . bounds)
+    ((and openp (flex-autopair-get-bounds 'region)) . bounds)
+    ;; ((and openp (flex-autopair-get-url)) . region);; symbol works better
+    ((and openp (flex-autopair-get-bounds 'symbol)) . bounds)
     ;; for lisp
     ((and openp
           (eq syntax ?\()
-          (memq major-mode electric-pair-dwim-lisp-mode)
-          (electric-pair-dwim-get-bounds 'sexp)) . bounds-and-space)
-    ((and openp (electric-pair-dwim-get-bounds 'sexp)) . bounds)
+          (memq major-mode flex-autopair-lisp-mode)
+          (flex-autopair-get-bounds 'sexp)) . bounds-and-space)
+    ((and openp (flex-autopair-get-bounds 'sexp)) . bounds)
     ;; Skip self.
-    ((and closep electric-pair-dwim-skip-self
+    ((and closep flex-autopair-skip-self
           (eq (char-after) last-command-event)) . skip)
     ((and closep) . self)
     ;; Insert matching pair.
     ((and openp
           (eq syntax ?\()
-          (memq major-mode electric-pair-dwim-lisp-mode)) . space-and-pair)
+          (memq major-mode flex-autopair-lisp-mode)) . space-and-pair)
     (openp . pair)
     ;; self-insert-command is default
     (t . self)
@@ -104,14 +104,14 @@ This can be convenient for people who find it easier to hit ) than C-f."
 ;;   "Alist of conditions"
   )
 
-;; (defcustom electric-pair-dwim-alias
-(setq electric-pair-dwim-alias
+;; (defcustom flex-autopair-alias
+(setq flex-autopair-alias
       '((self . (call-interactively 'self-insert-command))
-        (bounds . (electric-pair-dwim-wrap-region (car bounds)
+        (bounds . (flex-autopair-wrap-region (car bounds)
                                                   (cdr bounds)
                                                   opener closer))
         (bounds-and-space . (progn
-                              (electric-pair-dwim-wrap-region (car bounds)
+                              (flex-autopair-wrap-region (car bounds)
                                                               (cdr bounds)
                                                               opener closer)
                               (insert " ")
@@ -120,56 +120,56 @@ This can be convenient for people who find it easier to hit ) than C-f."
         (pair . (progn (call-interactively 'self-insert-command)
                        (save-excursion
                          (insert closer))))
-        (space-and-pair . (progn (electric-pair-dwim-smart-insert-space)
+        (space-and-pair . (progn (flex-autopair-smart-insert-space)
                                  (call-interactively 'self-insert-command)
                                  (save-excursion
                                    (insert closer)))))
 ;;   "Alist of function alias"
   )
 
-(defun electric-pair-dwim (syntax)
+(defun flex-autopair (syntax)
   (let*
       ((closer (if (eq syntax ?\()
-                   (cdr (or (assq last-command-event electric-pair-dwim-pairs)
+                   (cdr (or (assq last-command-event flex-autopair-pairs)
                             (aref (syntax-table) last-command-event)))
                  last-command-event))
        (opener (if (eq syntax ?\))
-                   (cdr (or (assq last-command-event electric-pair-dwim-pairs)
+                   (cdr (or (assq last-command-event flex-autopair-pairs)
                             (aref (syntax-table) last-command-event)))
                  last-command-event))
-       (openp (electric-pair-dwim-openp syntax))
+       (openp (flex-autopair-openp syntax))
        (closep (not openp))
        (bounds))
     (catch 'break
       (mapc (lambda (x)
               (when (setq bounds (eval (car x)))
                 (message "%s" (cdr x))
-                (eval (cdr (assq (cdr x) electric-pair-dwim-alias)))
+                (eval (cdr (assq (cdr x) flex-autopair-alias)))
                 (throw 'break t))
-              ) electric-pair-dwim-conditions)
+              ) flex-autopair-conditions)
       ))
   )
 
-(defun electric-pair-dwim-post-command-function ()
+(defun flex-autopair-post-command-function ()
   (interactive)
   (let* ((syntax (and (eq (char-before) last-command-event) ; Sanity check.
-                      electric-pair-dwim-mode
+                      flex-autopair-mode
                       (let ((x (assq last-command-event
-                                     electric-pair-dwim-pairs)))
+                                     flex-autopair-pairs)))
                         (cond
                          (x (if (eq (car x) (cdr x)) ?\" ?\())
-                         ((rassq last-command-event electric-pair-dwim-pairs)
+                         ((rassq last-command-event flex-autopair-pairs)
                           ?\))
                          (t (char-syntax last-command-event)))))))
     (cond ((memq syntax '(?\) ?\( ?\" ?\$))
            (undo-boundary)
            (delete-backward-char 1)
-           (electric-pair-dwim syntax)))
+           (flex-autopair syntax)))
     ))
 
 ;; post-self-insert-hook is emacs 24 hook
 ;;;###autoload
-(define-minor-mode electric-pair-dwim-mode
+(define-minor-mode flex-autopair-mode
   "Toggle automatic parens pairing (Electric Pair mode).
 With a prefix argument ARG, enable Electric Pair mode if ARG is
 positive, and disable it otherwise.  If called from Lisp, enable
@@ -181,25 +181,25 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
   :global t
   :lighter " EP"
   :group 'electricity
-  (if electric-pair-dwim-mode
+  (if flex-autopair-mode
       ;; (add-hook 'post-self-insert-hook
       (add-hook 'post-command-hook
-                #'electric-pair-dwim-post-command-function)
+                #'flex-autopair-post-command-function)
     ;; (remove-hook 'post-self-insert-hook
     (remove-hook 'post-command-hook
-                 #'electric-pair-dwim-post-command-function)))
+                 #'flex-autopair-post-command-function)))
 
 (dont-compile
   (when(fboundp 'expectations)
-    (electric-pair-dwim-mode 1)
+    (flex-autopair-mode 1)
     ;; (transient-mark-mode t)
     (expectations
-      (desc "electric-pair-dwim")
+      (desc "flex-autopair")
       (expect '("()" 2)
         (with-temp-buffer
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (call-interactively 'electric-pair-dwim-post-command-function)
+          (call-interactively 'flex-autopair-post-command-function)
           (list (buffer-string) (point))
           ))
       (expect '("a\"\"" 3)
@@ -208,7 +208,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "a")
           (setq last-command-event ?\")
           (call-interactively 'self-insert-command)
-          (call-interactively 'electric-pair-dwim-post-command-function)
+          (call-interactively 'flex-autopair-post-command-function)
           (list (buffer-string) (point))
           ))
       (expect '("a ()" 4)
@@ -217,7 +217,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "a")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (call-interactively 'electric-pair-dwim-post-command-function)
+          (call-interactively 'flex-autopair-post-command-function)
           (list (buffer-string) (point))
           ))
       (expect t
@@ -225,9 +225,9 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (emacs-lisp-mode)
           (font-lock-mode)
           (insert "a")
-          (electric-pair-dwim-openp ?\")
+          (flex-autopair-openp ?\")
           ))
-      ;; because of electric-pair-dwim-openp bug
+      ;; because of flex-autopair-openp bug
       ;; (expect nil
       ;;   (with-temp-buffer
       ;;     (emacs-lisp-mode)
@@ -236,13 +236,13 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       ;;     ;; (sit-for 1)
       ;;     (insert "\"a")
       ;;     ;; (get-text-property (1- (point)) 'face)
-      ;;     (electric-pair-dwim-openp ?\")
+      ;;     (flex-autopair-openp ?\")
       ;;     ))
       ;; (expect nil
       ;;   (with-temp-buffer
       ;;     (emacs-lisp-mode)
       ;;     (insert "\"a ")
-      ;;     (electric-pair-dwim-openp ?\")
+      ;;     (flex-autopair-openp ?\")
       ;;     ))
       ;; (expect '("\"a\"" 4)
       ;;   (with-temp-buffer
@@ -250,7 +250,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       ;;     (insert "\"a")
       ;;     (setq last-command-event ?\")
       ;;     (call-interactively 'self-insert-command)
-      ;;     (call-interactively 'electric-pair-dwim-post-command-function)
+      ;;     (call-interactively 'flex-autopair-post-command-function)
       ;;     (list (buffer-string) (point))
       ;;     ))
       (expect '("a()" 3)
@@ -258,7 +258,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "a")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (call-interactively 'electric-pair-dwim-post-command-function)
+          (call-interactively 'flex-autopair-post-command-function)
           (list (buffer-string) (point))
           ))
       (expect '("'()" 3)
@@ -267,7 +267,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "'")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (call-interactively 'electric-pair-dwim-post-command-function)
+          (call-interactively 'flex-autopair-post-command-function)
           (list (buffer-string) (point))
           ))
       (expect '("(())" 3)
@@ -278,7 +278,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
             (insert ")"))
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (list (buffer-string) (point))
           ))
       (desc "region")
@@ -288,7 +288,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "word")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string))
           )
       (expect "(word)"
@@ -298,7 +298,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (exchange-point-and-mark)
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "word)"
@@ -307,7 +307,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "word")
           (setq last-command-event ?\))
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "((word))"
@@ -316,7 +316,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
             (insert "(word)"))
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "( (word))"
@@ -326,7 +326,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
             (insert "(word)"))
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "\"(word)\""
@@ -335,7 +335,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
             (insert "(word)"))
           (setq last-command-event ?\")
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "(http://example.com/index.html)"
@@ -345,7 +345,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
             (insert "http://example.com/index.html"))
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "(\"http://example.com/index.html\")"
@@ -356,7 +356,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (goto-char 2)
           (setq last-command-event ?\")
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "( \"http://example.com/index.html\")"
@@ -366,7 +366,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
             (insert "\"http://example.com/index.html\""))
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "( \"word\")"
@@ -376,7 +376,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
             (insert "\"word\""))
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "(\"word\")"
@@ -385,7 +385,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
             (insert "\"word\""))
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "\"word\""
@@ -394,7 +394,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "word")
           (setq last-command-event ?\")
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "\\("
@@ -402,7 +402,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "\\")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "\\\\ ()"
@@ -411,7 +411,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "\\\\")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect "\\\\()"
@@ -419,7 +419,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "\\\\")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           (buffer-string)
           ))
       (expect '("()" 3)
@@ -429,7 +429,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
             (insert ")"))
           (setq last-command-event ?\))
           (call-interactively 'self-insert-command)
-          (electric-pair-dwim-post-command-function)
+          (flex-autopair-post-command-function)
           ;; (buffer-substring-no-properties (point-min) (point-max))
           (list (buffer-string) (point)))
           ))
@@ -461,5 +461,5 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
 
 ;; pair like comment /**/
 
-(provide 'electric-pair-dwim)
-;;; electric-pair-dwim.el ends here
+(provide 'flex-autopair)
+;;; flex-autopair.el ends here
