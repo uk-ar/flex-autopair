@@ -49,14 +49,18 @@ This can be convenient for people who find it easier to hit ) than C-f."
              `(,(mark) . ,(point))))
     (let ((bounds
            (bounds-of-thing-at-point symbol)))
-      (if (eq (car bounds) (point)) bounds nil)
+      (if (and (eq (car bounds) (point))
+               ;; bug for bounds-of-thing-at-point
+               (not (eq (point-min) (point-max))))
+          bounds nil)
       )))
 
 (defun electric-pair-dwim-openp (syntax &optional pos)
-  (setq pos (or pos (point)))
+  (setq pos (if (bobp) 1 (1- (or pos (point)))))
   (and (not (eq syntax ?\)))
        (or (eq syntax ?\();; '(?\( ?\" ?\$)
-           (not (eq (get-text-property pos 'face) font-lock-string-face))
+           ;; FIXME: bug with temp buffer
+           (not (eq (get-text-property pos 'face) 'font-lock-string-face))
        )))
 
 (defun electric-pair-dwim-smart-insert-space ()
@@ -88,8 +92,10 @@ This can be convenient for people who find it easier to hit ) than C-f."
     ;; Skip self.
     ((and closep electric-pair-dwim-skip-self
           (eq (char-after) last-command-event)) . skip)
+    ((and closep) . self)
     ;; Insert matching pair.
     ((and openp
+          (eq syntax ?\()
           (memq major-mode electric-pair-dwim-lisp-mode)) . space-and-pair)
     (openp . pair)
     ;; self-insert-command is default
@@ -189,13 +195,22 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
     ;; (transient-mark-mode t)
     (expectations
       (desc "electric-pair-dwim")
-      ;; (expect '("()" 2) ;; ??
-      ;; (with-temp-buffer
-      ;;     (setq last-command-event ?\()
-      ;;     (call-interactively 'self-insert-command)
-      ;;     (call-interactively 'electric-pair-dwim-post-command-function)
-      ;;     (list (buffer-string) (point))
-      ;;     ))
+      (expect '("()" 2)
+        (with-temp-buffer
+          (setq last-command-event ?\()
+          (call-interactively 'self-insert-command)
+          (call-interactively 'electric-pair-dwim-post-command-function)
+          (list (buffer-string) (point))
+          ))
+      (expect '("a\"\"" 3)
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert "a")
+          (setq last-command-event ?\")
+          (call-interactively 'self-insert-command)
+          (call-interactively 'electric-pair-dwim-post-command-function)
+          (list (buffer-string) (point))
+          ))
       (expect '("a ()" 4)
         (with-temp-buffer
           (emacs-lisp-mode)
@@ -205,6 +220,39 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (call-interactively 'electric-pair-dwim-post-command-function)
           (list (buffer-string) (point))
           ))
+      (expect t
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (font-lock-mode)
+          (insert "a")
+          (electric-pair-dwim-openp ?\")
+          ))
+      ;; because of electric-pair-dwim-openp bug
+      ;; (expect nil
+      ;;   (with-temp-buffer
+      ;;     (emacs-lisp-mode)
+      ;;     (font-lock-mode 1)
+      ;;     (setq font-lock-support-mode 'jit-lock-mode)
+      ;;     ;; (sit-for 1)
+      ;;     (insert "\"a")
+      ;;     ;; (get-text-property (1- (point)) 'face)
+      ;;     (electric-pair-dwim-openp ?\")
+      ;;     ))
+      ;; (expect nil
+      ;;   (with-temp-buffer
+      ;;     (emacs-lisp-mode)
+      ;;     (insert "\"a ")
+      ;;     (electric-pair-dwim-openp ?\")
+      ;;     ))
+      ;; (expect '("\"a\"" 4)
+      ;;   (with-temp-buffer
+      ;;     (emacs-lisp-mode)
+      ;;     (insert "\"a")
+      ;;     (setq last-command-event ?\")
+      ;;     (call-interactively 'self-insert-command)
+      ;;     (call-interactively 'electric-pair-dwim-post-command-function)
+      ;;     (list (buffer-string) (point))
+      ;;     ))
       (expect '("a()" 3)
         (with-temp-buffer
           (insert "a")
