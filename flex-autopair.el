@@ -1,10 +1,59 @@
-;; Electric pairing.
+;;; flex-autopair.el --- hoge
 
+;;-------------------------------------------------------------------
+;;
+;; Copyright (C) 2011 Yuuki Arisawa
+;;
+;; This file is NOT part of Emacs.
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2 of
+;; the License, or (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be
+;; useful, but WITHOUT ANY WARRANTY; without even the implied
+;; warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+;; PURPOSE.  See the GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public
+;; License along with this program; if not, write to the Free
+;; Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+;; MA 02111-1307 USA
+;;
+;;-------------------------------------------------------------------
+
+;; Author: Yuuki Arisawa <yuuki.ari@gmail.com>
+;; URL:https://github.com/uk-ar/flex-autopair.el
+;; Created: 30 November 2011
+;; Version: 1.0
+;; Keywords: keyboard input
+
+;;; Commentary:
+
+;; ########   Compatibility   ########################################
+;;
+;; Works with Emacs-23.2.1, 23.1.1
+
+;; ########   Quick start   ########################################
+;;
+;; Add to your ~/.emacs
+;;
+;; (require 'flex-autopair.el)
+;; (flex-autopair-mode 1)
+
+;;; History:
+
+;; Revision 0.1
+;; * Initial revision
+
+;; Code goes here
 (defcustom flex-autopair-pairs
-  '((?\" . ?\"))
-  ;; '(nil)
+  '((?\" . ?\")
+    (?\< . ?\>))
   "Alist of pairs that should be used regardless of major mode."
   :type '(repeat (cons character character)))
+;; should be buffer local
 
 (defcustom flex-autopair-skip-self t
   "If non-nil, skip char instead of inserting a second closing paren.
@@ -33,6 +82,11 @@ This can be convenient for people who find it easier to hit ) than C-f."
                                  font-lock-string-face))
   ;;(not (memq (char-syntax (following-char)) '(?\" ?\')))
   )
+
+(defun flex-autopair-stringp (&optional pos)
+  (setq pos (or pos (point)))
+  (eq (get-text-property pos 'face)
+      font-lock-string-face))
 
 (defun flex-autopair-escapedp (&optional pos)
   (setq pos (or pos (point)))
@@ -75,10 +129,18 @@ This can be convenient for people who find it easier to hit ) than C-f."
               inferior-gauche-mode scheme-mode)
   )
 
+(defun flex-autopair-match-linep (regexp)
+  (save-excursion (re-search-backward regexp (point-at-bol) t))
+  )
+
 ;; (defcustom flex-autopair-conditions
 (setq flex-autopair-conditions
   '(((flex-autopair-escapedp) . self)
     (overwrite-mode . self)
+    ;; ((and (eq last-input-event ?<)
+    ;;       (memq major-mode '(c-mode c++mode objc-mode))
+    ;;       (flex-autopair-match-line
+    ;;        "#include\\|#import|static_cast|dynamic_cast")) . pair)
     ;; Wrap a pair.
     ((and openp (flex-autopair-get-bounds 'region)) . bounds)
     ;; ((and openp (flex-autopair-get-url)) . region);; symbol works better
@@ -161,7 +223,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
                          ((rassq last-command-event flex-autopair-pairs)
                           ?\))
                          (t (char-syntax last-command-event)))))))
-    (cond ((memq syntax '(?\) ?\( ?\" ?\$))
+    (cond ((memq syntax '(?\) ?\( ?\" ?\$)) ;; . is for c <
            (undo-boundary)
            (delete-backward-char 1)
            (flex-autopair syntax)))
@@ -202,6 +264,13 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (call-interactively 'flex-autopair-post-command-function)
           (list (buffer-string) (point))
           ))
+      (expect '("（）" 2);; japanese
+        (with-temp-buffer
+          (setq last-command-event ?\（)
+          (call-interactively 'self-insert-command)
+          (call-interactively 'flex-autopair-post-command-function)
+          (list (buffer-string) (point))
+          ))
       (expect '("a\"\"" 3)
         (with-temp-buffer
           (emacs-lisp-mode)
@@ -227,32 +296,31 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (insert "a")
           (flex-autopair-openp ?\")
           ))
-      ;; because of flex-autopair-openp bug
-      ;; (expect nil
-      ;;   (with-temp-buffer
-      ;;     (emacs-lisp-mode)
-      ;;     (font-lock-mode 1)
-      ;;     (setq font-lock-support-mode 'jit-lock-mode)
-      ;;     ;; (sit-for 1)
-      ;;     (insert "\"a")
-      ;;     ;; (get-text-property (1- (point)) 'face)
-      ;;     (flex-autopair-openp ?\")
-      ;;     ))
-      ;; (expect nil
-      ;;   (with-temp-buffer
-      ;;     (emacs-lisp-mode)
-      ;;     (insert "\"a ")
-      ;;     (flex-autopair-openp ?\")
-      ;;     ))
-      ;; (expect '("\"a\"" 4)
-      ;;   (with-temp-buffer
-      ;;     (emacs-lisp-mode)
-      ;;     (insert "\"a")
-      ;;     (setq last-command-event ?\")
-      ;;     (call-interactively 'self-insert-command)
-      ;;     (call-interactively 'flex-autopair-post-command-function)
-      ;;     (list (buffer-string) (point))
-      ;;     ))
+      (expect nil
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert "\"a")
+          ;; fontify!!
+          (font-lock-fontify-buffer)
+          (flex-autopair-openp ?\")
+          ))
+      (expect nil
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert "\"a ")
+          (font-lock-fontify-buffer)
+          (flex-autopair-openp ?\")
+          ))
+      (expect '("\"a\"" 4)
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (insert "\"a")
+          (font-lock-fontify-buffer)
+          (setq last-command-event ?\")
+          (call-interactively 'self-insert-command)
+          (call-interactively 'flex-autopair-post-command-function)
+          (list (buffer-string) (point))
+          ))
       (expect '("a()" 3)
         (with-temp-buffer
           (insert "a")
