@@ -79,7 +79,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
   (setq pos (or pos (point)))
   (memq (get-text-property pos 'face)
         '(font-lock-comment-face font-lock-doc-face
-                                 font-lock-string-face))
+                                 font-lock-string-face
+                                 font-lock-comment-delimiter-face))
   ;;(not (memq (char-syntax (following-char)) '(?\" ?\')))
   )
 
@@ -145,6 +146,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
     ((and openp (flex-autopair-get-bounds 'region)) . bounds)
     ;; ((and openp (flex-autopair-get-url)) . region);; symbol works better
     ((and openp (flex-autopair-get-bounds 'symbol)) . bounds)
+    ((and openp (flex-autopair-get-bounds 'word)) . bounds)
     ;; for lisp
     ((and openp
           (eq syntax ?\()
@@ -240,7 +242,6 @@ the mode if ARG is omitted or nil.
 Electric Pair mode is a global minor mode.  When enabled, typing
 an open parenthesis automatically inserts the corresponding
 closing parenthesis.  \(Likewise for brackets, etc.)"
-  :global t
   :lighter " EP"
   :group 'electricity
   (if flex-autopair-mode
@@ -266,6 +267,15 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ))
       (expect '("（）" 2);; japanese
         (with-temp-buffer
+          (setq last-command-event ?\（)
+          (call-interactively 'self-insert-command)
+          (call-interactively 'flex-autopair-post-command-function)
+          (list (buffer-string) (point))
+          ))
+      (expect '("（あ）" 2);; japanese
+        (with-temp-buffer
+          (save-excursion
+            (insert "あ"))
           (setq last-command-event ?\（)
           (call-interactively 'self-insert-command)
           (call-interactively 'flex-autopair-post-command-function)
