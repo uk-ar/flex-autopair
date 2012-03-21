@@ -49,8 +49,7 @@
 
 ;; Code goes here
 (defcustom flex-autopair-pairs
-  '((?\" . ?\")
-    (?\< . ?\>))
+  '((?\" . ?\"))
   "Alist of pairs that should be used regardless of major mode."
   :type '(repeat (cons character character)))
 ;; should be buffer local
@@ -96,7 +95,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
     (not (zerop (% (skip-syntax-backward "\\") 2))))
   )
 
-(defun flex-autopair-get-bounds (symbol)
+;; (defun flex-autopair-get-bounds (symbol)
+(defun flex-autopair-beginning-of-boundsp (symbol)
   (if (eq symbol 'region)
       (and (use-region-p)
            (if (< (point) (mark))
@@ -134,33 +134,61 @@ This can be convenient for people who find it easier to hit ) than C-f."
   (save-excursion (re-search-backward regexp (point-at-bol) t))
   )
 
+(setq flex-autopair-lisp-conditions
+      '(((and openp
+              (eq syntax ?\()
+              (memq major-mode flex-autopair-lisp-mode)
+              (flex-autopair-beginning-of-boundsp 'sexp)) . bounds-and-space)
+        ((and openp
+              (eq syntax ?\()
+              (memq major-mode flex-autopair-lisp-mode)) . space-and-pair))
+      )
+
+(setq flex-autopair-c-conditions
+      '(((and (eq last-command-event ?<)
+              (memq major-mode '(c-mode c++mode objc-mode))
+              (flex-autopair-match-linep
+               "#include\\|#import|static_cast|dynamic_cast")) . pair)
+        ;; key-combo
+        ((and (eq last-command-event ?<)
+              (boundp key-combo-mode)
+              (eq key-combo-mode t)
+              (memq major-mode '(c-mode c++mode objc-mode))) . space-self-space)
+        ((and (eq last-command-event ?<)
+              (memq major-mode '(c-mode c++mode objc-mode))) . self)
+        ))
+
+(defun flex-autopair-c-hook-function ()
+  (make-local-variable 'flex-autopair-pairs)
+  (add-to-list 'flex-autopair-pairs '(?\< . ?\>))
+  )
+
+(dolist (hook
+         '(c-mode-common-hook
+           c++-mode-hook
+           objc-mode-hook))
+  (add-hook hook 'flex-autopair-c-hook-function))
+
 ;; (defcustom flex-autopair-conditions
 (setq flex-autopair-conditions
-  '(((flex-autopair-escapedp) . self)
+  `(((flex-autopair-escapedp) . self)
     (overwrite-mode . self)
-    ;; ((and (eq last-input-event ?<)
-    ;;       (memq major-mode '(c-mode c++mode objc-mode))
-    ;;       (flex-autopair-match-line
-    ;;        "#include\\|#import|static_cast|dynamic_cast")) . pair)
     ;; Wrap a pair.
-    ((and openp (flex-autopair-get-bounds 'region)) . bounds)
+    ((and openp (flex-autopair-beginning-of-boundsp 'region)) . bounds)
     ;; ((and openp (flex-autopair-get-url)) . region);; symbol works better
-    ((and openp (flex-autopair-get-bounds 'symbol)) . bounds)
-    ((and openp (flex-autopair-get-bounds 'word)) . bounds)
+    ((and openp (flex-autopair-beginning-of-boundsp 'symbol)) . bounds)
+    ((and openp (flex-autopair-beginning-of-boundsp 'word)) . bounds)
+    ;; ((message "last:%S" last-command-event))
     ;; for lisp
-    ((and openp
-          (eq syntax ?\()
-          (memq major-mode flex-autopair-lisp-mode)
-          (flex-autopair-get-bounds 'sexp)) . bounds-and-space)
-    ((and openp (flex-autopair-get-bounds 'sexp)) . bounds)
+    ,@flex-autopair-lisp-conditions
+    ;; for c
+    ;; ,@flex-autopair-c-conditions
+    ((and openp (flex-autopair-beginning-of-boundsp 'sexp)) . bounds)
     ;; Skip self.
     ((and closep flex-autopair-skip-self
           (eq (char-after) last-command-event)) . skip)
-    ((and closep) . self)
+    (closep . self)
     ;; Insert matching pair.
-    ((and openp
-          (eq syntax ?\()
-          (memq major-mode flex-autopair-lisp-mode)) . space-and-pair)
     (openp . pair)
     ;; self-insert-command is default
     (t . self)
@@ -258,6 +286,42 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
     ;; (transient-mark-mode t)
     (expectations
       (desc "flex-autopair")
+      (expect '("#include<>" 10)
+        (with-temp-buffer
+          (c-mode)
+          (insert "#include")
+          (setq last-command-event ?\<)
+          (call-interactively 'self-insert-command)
+          (call-interactively 'flex-autopair-post-command-function)
+          (list (buffer-string) (point))
+          ))
+      (expect '("hoge < " 8)
+        (with-temp-buffer
+          (c-mode)
+          (insert "hoge")
+          (setq last-command-event ?\<)
+          (call-interactively 'self-insert-command)
+          (call-interactively 'flex-autopair-post-command-function)
+          (list (buffer-string) (point))
+          ))
+      (expect '(?< . ?>)
+        (with-temp-buffer
+          (c-mode)
+          (assoc ?< flex-autopair-pairs)
+          ))
+      (expect nil
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (assoc ?< flex-autopair-pairs)
+          ))
+      (expect '("<" 2)
+        (with-temp-buffer
+          (emacs-lisp-mode)
+          (setq last-command-event ?\<)
+          (call-interactively 'self-insert-command)
+          (call-interactively 'flex-autopair-post-command-function)
+          (list (buffer-string) (point))
+          ))
       (expect '("()" 2)
         (with-temp-buffer
           (setq last-command-event ?\()
