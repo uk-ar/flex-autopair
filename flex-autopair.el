@@ -2,7 +2,7 @@
 
 ;;-------------------------------------------------------------------
 ;;
-;; Copyright (C) 2011 Yuuki Arisawa
+;; Copyright (C) 2012 Yuuki Arisawa
 ;;
 ;; This file is NOT part of Emacs.
 ;;
@@ -25,8 +25,8 @@
 
 ;; Author: Yuuki Arisawa <yuuki.ari@gmail.com>
 ;; URL:https://github.com/uk-ar/flex-autopair.el
-;; Created: 30 November 2011
-;; Version: 1.0
+;; Created: 22 March 2012
+;; Version: 0.1
 ;; Keywords: keyboard input
 
 ;;; Commentary:
@@ -44,7 +44,7 @@
 
 ;;; History:
 
-;; Revision 0.1
+;; Revision 0.1 2012/03/22 06:18:19
 ;; * Initial revision
 
 ;; Code goes here
