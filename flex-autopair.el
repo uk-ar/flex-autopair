@@ -197,14 +197,14 @@ This can be convenient for people who find it easier to hit ) than C-f."
   )
 
 ;; (defcustom flex-autopair-alias
-(setq flex-autopair-alias
+(setq flex-autopair-actions
       '((self . (call-interactively 'self-insert-command))
-        (bounds . (flex-autopair-wrap-region (car bounds)
-                                                  (cdr bounds)
+        (bounds . (flex-autopair-wrap-region (car result)
+                                                  (cdr result)
                                                   opener closer))
         (bounds-and-space . (progn
-                              (flex-autopair-wrap-region (car bounds)
-                                                              (cdr bounds)
+                              (flex-autopair-wrap-region (car result)
+                                                              (cdr result)
                                                               opener closer)
                               (insert " ")
                               (backward-char 1)))
@@ -215,7 +215,12 @@ This can be convenient for people who find it easier to hit ) than C-f."
         (space-and-pair . (progn (flex-autopair-smart-insert-space)
                                  (call-interactively 'self-insert-command)
                                  (save-excursion
-                                   (insert closer)))))
+                                   (insert closer))))
+        (space-self-space . (progn (flex-autopair-smart-insert-space)
+                                   (call-interactively 'self-insert-command)
+                                   (insert " ")
+                                   ))
+        )
 ;;   "Alist of function alias"
   )
 
@@ -231,15 +236,18 @@ This can be convenient for people who find it easier to hit ) than C-f."
                  last-command-event))
        (openp (flex-autopair-openp syntax))
        (closep (not openp))
-       (bounds))
+       (result))
     (catch 'break
       (mapc (lambda (x)
-              (when (setq bounds (eval (car x)))
-                (message "%s" (cdr x))
-                (eval (cdr (assq (cdr x) flex-autopair-alias)))
+              (when (setq result (eval (car x)))
+                (if (not (minibufferp))
+                    (message "%s" (cdr x)))
+                (eval (cdr (assq (cdr x) flex-autopair-actions)))
                 (throw 'break t))
               ) flex-autopair-conditions)
-      ))
+      );; break
+    ;; (redraw-frame (selected-frame))
+    )
   )
 
 (defun flex-autopair-post-command-function ()
