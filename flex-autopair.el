@@ -261,7 +261,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
                          ((rassq last-command-event flex-autopair-pairs)
                           ?\))
                          (t (char-syntax last-command-event)))))))
-    (cond ((memq syntax '(?\) ?\( ?\" ?\$)) ;; . is for c <
+    (cond ((and (memq syntax '(?\) ?\( ?\" ?\$)) ;; . is for c <
+                (not isearch-mode))
            (undo-boundary)
            (delete-backward-char 1)
            (flex-autopair syntax)))
@@ -337,6 +338,17 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (call-interactively 'flex-autopair-post-command-function)
           (list (buffer-string) (point))
           ))
+      (desc "isearch-mode")
+      (expect '("(" 2)
+        (with-temp-buffer
+          (setq last-command-event ?\()
+          (isearch-mode t)
+          (call-interactively 'self-insert-command)
+          (call-interactively 'flex-autopair-post-command-function)
+          (isearch-done)
+          (list (buffer-string) (point))
+          ))
+      (desc "japanese")
       (expect '("（）" 2);; japanese
         (with-temp-buffer
           (setq last-command-event ?\（)
