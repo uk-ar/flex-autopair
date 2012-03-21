@@ -279,7 +279,8 @@ the mode if ARG is omitted or nil.
 Electric Pair mode is a global minor mode.  When enabled, typing
 an open parenthesis automatically inserts the corresponding
 closing parenthesis.  \(Likewise for brackets, etc.)"
-  :lighter " EP"
+  :lighter " FA"
+  :global t
   :group 'electricity
   (if flex-autopair-mode
       ;; (add-hook 'post-self-insert-hook
@@ -593,9 +594,9 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
           ;; (buffer-substring-no-properties (point-min) (point-max))
-          (list (buffer-string) (point)))
+          (list (buffer-string) (point))
           ))
-      ))
+      )))
 
 ;; https://github.com/jixiuf/joseph-autopair/blob/master/joseph-autopair.el
 ;; auto pair with newline
@@ -621,7 +622,9 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
 ;; custumizable
 ;; auto wrap symbol
 
-;; pair like comment /**/
+;; pair kind of comment /**/
 
+;; bug with python indent?
+;; https://github.com/fgallina/python.el/issues/59
 (provide 'flex-autopair)
 ;;; flex-autopair.el ends here
