@@ -1,4 +1,4 @@
-;;; flex-autopair.el --- hoge
+;;; flex-autopair.el --- Automatically insert pair braces and quotes, insertion condition & action are highly customizable.
 
 ;;-------------------------------------------------------------------
 ;;
@@ -24,7 +24,7 @@
 ;;-------------------------------------------------------------------
 
 ;; Author: Yuuki Arisawa <yuuki.ari@gmail.com>
-;; URL:https://github.com/uk-ar/flex-autopair.el
+;; URL: https://github.com/uk-ar/flex-autopair.el
 ;; Created: 22 March 2012
 ;; Version: 0.1
 ;; Keywords: keyboard input
