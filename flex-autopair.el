@@ -49,10 +49,11 @@
 
 ;; Code goes here
 (defcustom flex-autopair-pairs
-  '((?\" . ?\"))
+  '((nil . nil))
   "Alist of pairs that should be used regardless of major mode."
   :type '(repeat (cons character character)))
-;; should be buffer local
+;; '((?\" . ?\"))
+(make-variable-buffer-local 'flex-autopair-pairs)
 
 (defcustom flex-autopair-skip-self t
   "If non-nil, skip char instead of inserting a second closing paren.
@@ -87,6 +88,11 @@ This can be convenient for people who find it easier to hit ) than C-f."
   (setq pos (or pos (point)))
   (eq (get-text-property pos 'face)
       font-lock-string-face))
+
+(defun flex-autopair-docp (&optional pos)
+  (setq pos (or pos (point)))
+  (eq (get-text-property pos 'face)
+      font-lock-doc-face))
 
 (defun flex-autopair-escapedp (&optional pos)
   (setq pos (or pos (point)))
@@ -125,43 +131,61 @@ This can be convenient for people who find it easier to hit ) than C-f."
            (bolp))))
 
 
-(setq flex-autopair-lisp-mode
+(defcustom flex-autopair-lisp-modes
   '(lisp-mode emacs-lisp-mode lisp-interaction-mode
               inferior-gauche-mode scheme-mode)
-  )
+  "Major modes `flex-autopair-mode' treat ` as pair.")
 
 (defun flex-autopair-match-linep (regexp)
   (save-excursion (re-search-backward regexp (point-at-bol) t))
   )
 
-(setq flex-autopair-lisp-conditions
-      '(((and openp
-              (eq syntax ?\()
-              (memq major-mode flex-autopair-lisp-mode)
-              (flex-autopair-beginning-of-boundsp 'sexp)) . bounds-and-space)
-        ((and openp
-              (eq syntax ?\()
-              (memq major-mode flex-autopair-lisp-mode)) . space-and-pair))
-      )
+(defcustom flex-autopair-lisp-conditions
+  '(((and (eq last-command-event ?\()
+          (memq major-mode flex-autopair-lisp-modes)
+          (flex-autopair-beginning-of-boundsp 'sexp)) . bounds-and-space)
+    ((and (eq last-command-event ?\()
+          (memq major-mode flex-autopair-lisp-modes)
+          (flex-autopair-need-spacep)) . space-and-pair)
+    ((and (eq last-command-event ?\()
+          (memq major-mode flex-autopair-lisp-modes)) . pair)
+    ((and (eq last-command-event ?`)
+          (flex-autopair-stringp)
+          (memq major-mode flex-autopair-lisp-modes)) . pair)
+    ((and (eq last-command-event ?`)
+          (memq major-mode flex-autopair-lisp-modes)) . self)
+    )
+  "")
 
-(setq flex-autopair-c-conditions
-      '(((and (eq last-command-event ?<)
-              (memq major-mode '(c-mode c++mode objc-mode))
-              (flex-autopair-match-linep
-               "#include\\|#import|static_cast|dynamic_cast")) . pair)
-        ;; key-combo
-        ((and (eq last-command-event ?<)
-              (boundp key-combo-mode)
-              (eq key-combo-mode t)
-              (memq major-mode '(c-mode c++mode objc-mode))) . space-self-space)
-        ((and (eq last-command-event ?<)
-              (memq major-mode '(c-mode c++mode objc-mode))) . self)
-        ))
+(defcustom flex-autopair-c-conditions
+  '(((and (eq last-command-event ?<)
+          (memq major-mode flex-autopair-c-modes)
+          (flex-autopair-match-linep
+           "#include\\|#import|static_cast|dynamic_cast")) . pair)
+    ;; work with key-combo
+    ((and (eq last-command-event ?<)
+          (boundp key-combo-mode)
+          (eq key-combo-mode t)
+          (memq major-mode flex-autopair-c-modes)) . space-self-space)
+    ((and (eq last-command-event ?<)
+          (memq major-mode flex-autopair-c-modes)) . self)
+    )
+  "")
+
+(defun flex-autopair-lisp-hook-function ()
+  (add-to-list 'flex-autopair-pairs '(?` . ?')))
+
+(dolist (hook
+         '(lisp-mode-hook emacs-lisp-mode-hook lisp-interaction-mode-hook
+                          inferior-gauche-mode-hook scheme-mode-hook))
+  (add-hook hook 'flex-autopair-lisp-hook-function))
+
+(defcustom flex-autopair-c-modes
+  '(c-mode c++mode objc-mode)
+  "Major modes `flex-autopair-mode' treat < as pair.")
 
 (defun flex-autopair-c-hook-function ()
-  (make-local-variable 'flex-autopair-pairs)
-  (add-to-list 'flex-autopair-pairs '(?\< . ?\>))
-  )
+  (add-to-list 'flex-autopair-pairs '(?\< . ?\>)))
 
 (dolist (hook
          '(c-mode-common-hook
