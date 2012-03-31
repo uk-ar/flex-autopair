@@ -273,7 +273,6 @@ This can be convenient for people who find it easier to hit ) than C-f."
            (flex-autopair syntax)))
     ))
 
-;; post-self-insert-hook is emacs 24 hook
 ;;;###autoload
 (define-minor-mode flex-autopair-mode
   "Toggle automatic parens pairing (Electric Pair mode).
@@ -288,12 +287,17 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
   :global t
   :group 'electricity
   (if flex-autopair-mode
-      ;; (add-hook 'post-self-insert-hook
-      (add-hook 'post-command-hook
-                #'flex-autopair-post-command-function)
-    ;; (remove-hook 'post-self-insert-hook
-    (remove-hook 'post-command-hook
-                 #'flex-autopair-post-command-function)))
+      (if (boundp 'post-self-insert-hook)
+          (add-hook 'post-self-insert-hook
+                    #'flex-autopair-post-command-function)
+        (add-hook 'post-command-hook
+                  #'flex-autopair-post-command-function))
+    (if (boundp 'post-self-insert-hook)
+        (remove-hook 'post-self-insert-hook
+                     #'flex-autopair-post-command-function)
+      (remove-hook 'post-command-hook
+                   #'flex-autopair-post-command-function))))
+
 
 (dont-compile
   (when(fboundp 'expectations)
