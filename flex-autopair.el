@@ -1,4 +1,4 @@
-;;; flex-autopair.el --- Automatically insert pair braces and quotes, insertion condition & action are highly customizable.
+;;; flex-autopair.el --- Automatically insert pair braces and quotes, insertion conditions & actions are highly customizable.
 
 ;;-------------------------------------------------------------------
 ;;
@@ -273,10 +273,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
                 (eval (cdr (assq (cdr x) flex-autopair-actions)))
                 (throw 'break t))
               ) flex-autopair-conditions)
-      );; break
-    ;; (redraw-frame (selected-frame))
-    )
-  )
+      )))
 
 (defun flex-autopair-post-command-function ()
   (interactive)
@@ -298,12 +295,12 @@ This can be convenient for people who find it easier to hit ) than C-f."
 
 ;;;###autoload
 (define-minor-mode flex-autopair-mode
-  "Toggle automatic parens pairing (Electric Pair mode).
-With a prefix argument ARG, enable Electric Pair mode if ARG is
+  "Toggle automatic parens pairing (Flex Autopair mode).
+With a prefix argument ARG, enable Flex Autopair mode if ARG is
 positive, and disable it otherwise.  If called from Lisp, enable
 the mode if ARG is omitted or nil.
 
-Electric Pair mode is a global minor mode.  When enabled, typing
+Flex Autopair mode is a global minor mode.  When enabled, typing
 an open parenthesis automatically inserts the corresponding
 closing parenthesis.  \(Likewise for brackets, etc.)"
   :lighter " FA"
@@ -656,6 +653,11 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
 
 ;; pair kind of comment /**/
 
+;; reference
+;; (browse-url "https://github.com/emacsmirror/emacs/blob/master/lisp/electric.el")
+;; bug with blink-paren?
+;; bug with auto complete?
+;; https://github.com/m2ym/auto-complete/issues/85
 ;; bug with python indent?
 ;; https://github.com/fgallina/python.el/issues/59
 (provide 'flex-autopair)
