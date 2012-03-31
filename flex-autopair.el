@@ -116,14 +116,14 @@ This can be convenient for people who find it easier to hit ) than C-f."
        (or (eq syntax ?\();; '(?\( ?\" ?\$)
            ;; FIXME: bug with temp buffer
            (not (eq (get-text-property pos 'face) 'font-lock-string-face))
-       )))
+           )))
 
-(defun flex-autopair-smart-insert-space ()
-  (unless (or (eq (char-syntax (preceding-char)) ? )
-              (eq (char-syntax (preceding-char)) ?\( )
-              (eq (char-syntax (preceding-char)) ?')
-              (bolp))
-    (insert " " )))
+(defun flex-autopair-need-spacep ()
+  (not (or (eq (char-syntax (preceding-char)) ? )
+           (eq (char-syntax (preceding-char)) ?\( );; case for (let (()))
+           (eq (char-syntax (preceding-char)) ?');; case for quote '()
+           (bolp))))
+
 
 (setq flex-autopair-lisp-mode
   '(lisp-mode emacs-lisp-mode lisp-interaction-mode
@@ -199,30 +199,32 @@ This can be convenient for people who find it easier to hit ) than C-f."
 ;; (defcustom flex-autopair-alias
 (setq flex-autopair-actions
       '((self . (call-interactively 'self-insert-command))
-        (bounds . (flex-autopair-wrap-region (car result)
-                                                  (cdr result)
-                                                  opener closer))
-        (bounds-and-space . (progn
-                              (flex-autopair-wrap-region (car result)
-                                                              (cdr result)
-                                                              opener closer)
-                              (insert " ")
-                              (backward-char 1)))
         (skip . (forward-char 1))
         (pair . (progn (call-interactively 'self-insert-command)
                        (save-excursion
                          (insert closer))))
-        (space-and-pair . (progn (flex-autopair-smart-insert-space)
+        (bounds . (flex-autopair-wrap-region (car result)
+                                             (cdr result)
+                                             opener closer))
+        (bounds-and-space . (progn
+                              (flex-autopair-wrap-region (car result)
+                                                         (cdr result)
+                                                         opener closer)
+                              (insert " ")
+                              (backward-char 1)))
+        (space-and-pair . (progn (insert " ")
                                  (call-interactively 'self-insert-command)
                                  (save-excursion
                                    (insert closer))))
-        (space-self-space . (progn (flex-autopair-smart-insert-space)
+        (space-self-space . (progn (if (flex-autopair-need-spacep)
+                                       (insert " " ))
                                    (call-interactively 'self-insert-command)
                                    (insert " ")
-                                   ))
+                                   ));; for key-combo
         )
-;;   "Alist of function alias"
-  )
+      ;;   "Alist of actions"
+      )
+
 
 (defun flex-autopair (syntax)
   (let*
