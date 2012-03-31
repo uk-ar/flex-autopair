@@ -195,30 +195,29 @@ This can be convenient for people who find it easier to hit ) than C-f."
 
 ;; (defcustom flex-autopair-conditions
 (setq flex-autopair-conditions
-  `(((flex-autopair-escapedp) . self)
-    (overwrite-mode . self)
-    ;; Wrap a pair.
-    ((and openp (flex-autopair-beginning-of-boundsp 'region)) . bounds)
-    ;; ((and openp (flex-autopair-get-url)) . region);; symbol works better
-    ((and openp (flex-autopair-beginning-of-boundsp 'symbol)) . bounds)
-    ((and openp (flex-autopair-beginning-of-boundsp 'word)) . bounds)
-    ;; ((message "last:%S" last-command-event))
-    ;; for lisp
-    ,@flex-autopair-lisp-conditions
-    ;; for c
-    ;; ,@flex-autopair-c-conditions
-    ((and openp (flex-autopair-beginning-of-boundsp 'sexp)) . bounds)
-    ;; Skip self.
-    ((and closep flex-autopair-skip-self
-          (eq (char-after) last-command-event)) . skip)
-    (closep . self)
-    ;; Insert matching pair.
-    (openp . pair)
-    ;; self-insert-command is default
-    (t . self)
-    )
-;;   "Alist of conditions"
-  )
+      `(((flex-autopair-escapedp) . self)
+        (overwrite-mode . self)
+        ;; Wrap a pair.
+        ((and openp (flex-autopair-beginning-of-boundsp 'region)) . bounds)
+        ;; ((and openp (flex-autopair-get-url)) . region);; symbol works better
+        ((and openp (flex-autopair-beginning-of-boundsp 'symbol)) . bounds)
+        ((and openp (flex-autopair-beginning-of-boundsp 'word)) . bounds)
+        ;; for lisp
+        ,@flex-autopair-lisp-conditions
+        ;; for c
+        ,@flex-autopair-c-conditions
+        ((and openp (flex-autopair-beginning-of-boundsp 'sexp)) . bounds)
+        ;; Insert matching pair.
+        (openp . pair)
+        ;; Skip self.
+        ((and closep flex-autopair-skip-self
+              (eq (char-after) last-command-event)) . skip)
+        (closep . self)
+        ;; Default is self-insert-command.
+        (t . self)
+        )
+      ;;   "Alist of conditions"
+      )
 
 ;; (defcustom flex-autopair-alias
 (setq flex-autopair-actions
@@ -486,7 +485,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
           (buffer-string))
-          )
+        )
       (expect "(word)"
         (with-temp-buffer
           (set-mark (point))
@@ -546,7 +545,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ))
       (expect "(\"http://example.com/index.html\")"
         (with-temp-buffer
-      (emacs-lisp-mode)
+          (emacs-lisp-mode)
           (save-excursion
             (insert "(http://example.com/index.html)"))
           (goto-char 2)
