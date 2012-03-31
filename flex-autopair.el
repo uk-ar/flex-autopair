@@ -225,6 +225,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
       ;;   "Alist of actions"
       )
 
+(defcustom flex-autopair-echo-actionp t
+  "If t, echo which action was executed")
 
 (defun flex-autopair (syntax)
   (let*
@@ -242,7 +244,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
     (catch 'break
       (mapc (lambda (x)
               (when (setq result (eval (car x)))
-                (if (not (minibufferp))
+                (if (and flex-autopair-echo-actionp
+                         (not (minibufferp)))
                     (message "%s" (cdr x)))
                 (eval (cdr (assq (cdr x) flex-autopair-actions)))
                 (throw 'break t))
