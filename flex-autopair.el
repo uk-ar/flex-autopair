@@ -26,7 +26,7 @@
 ;; Author: Yuuki Arisawa <yuuki.ari@gmail.com>
 ;; URL: https://github.com/uk-ar/flex-autopair.el
 ;; Created: 22 March 2012
-;; Version: 0.1
+;; Version: 0.2
 ;; Keywords: keyboard input
 
 ;;; Commentary:
@@ -44,6 +44,11 @@
 
 ;;; History:
 
+;; Revision 0.2 2012/04/01 18:27:46
+;; * Make flex-autopair-pairs buffer-local.
+;; * Add variable to enable echo.
+;; * Add function to reload conditions.
+;;
 ;; Revision 0.1 2012/03/22 06:18:19
 ;; * Initial revision
 
