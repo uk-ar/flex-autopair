@@ -193,60 +193,78 @@ This can be convenient for people who find it easier to hit ) than C-f."
            objc-mode-hook))
   (add-hook hook 'flex-autopair-c-hook-function))
 
-;; (defcustom flex-autopair-conditions
-(setq flex-autopair-conditions
-      `(((flex-autopair-escapedp) . self)
-        (overwrite-mode . self)
-        ;; Wrap a pair.
-        ((and openp (flex-autopair-beginning-of-boundsp 'region)) . bounds)
-        ;; ((and openp (flex-autopair-get-url)) . region);; symbol works better
-        ((and openp (flex-autopair-beginning-of-boundsp 'symbol)) . bounds)
-        ((and openp (flex-autopair-beginning-of-boundsp 'word)) . bounds)
-        ;; for lisp
-        ,@flex-autopair-lisp-conditions
-        ;; for c
-        ,@flex-autopair-c-conditions
-        ((and openp (flex-autopair-beginning-of-boundsp 'sexp)) . bounds)
-        ;; Insert matching pair.
-        (openp . pair)
-        ;; Skip self.
-        ((and closep flex-autopair-skip-self
-              (eq (char-after) last-command-event)) . skip)
-        (closep . self)
-        ;; Default is self-insert-command.
-        (t . self)
-        )
-      ;;   "Alist of conditions"
-      )
+(defcustom flex-autopair-user-conditions-high nil
+  "Alist of conditions")
 
-;; (defcustom flex-autopair-alias
-(setq flex-autopair-actions
-      '((self . (call-interactively 'self-insert-command))
-        (skip . (forward-char 1))
-        (pair . (progn (call-interactively 'self-insert-command)
-                       (save-excursion
-                         (insert closer))))
-        (bounds . (flex-autopair-wrap-region (car result)
-                                             (cdr result)
-                                             opener closer))
-        (bounds-and-space . (progn
-                              (flex-autopair-wrap-region (car result)
-                                                         (cdr result)
-                                                         opener closer)
-                              (insert " ")
-                              (backward-char 1)))
-        (space-and-pair . (progn (insert " ")
-                                 (call-interactively 'self-insert-command)
-                                 (save-excursion
-                                   (insert closer))))
-        (space-self-space . (progn (if (flex-autopair-need-spacep)
-                                       (insert " " ))
-                                   (call-interactively 'self-insert-command)
-                                   (insert " ")
-                                   ));; for key-combo
-        )
-      ;;   "Alist of actions"
-      )
+(defcustom flex-autopair-user-conditions-low nil
+  "Alist of conditions")
+
+(defun flex-autopair-gen-conditions ()
+  `(((flex-autopair-escapedp) . self)
+    (overwrite-mode . self)
+    ,@flex-autopair-user-conditions-high
+    ;; Wrap a pair.
+    ((and openp (flex-autopair-beginning-of-boundsp 'region)) . bounds)
+    ;; ((and openp (flex-autopair-get-url)) . region);; symbol works better
+    ((and openp (flex-autopair-beginning-of-boundsp 'symbol)) . bounds)
+    ((and openp (flex-autopair-beginning-of-boundsp 'word)) . bounds)
+    ;; for lisp
+    ,@flex-autopair-lisp-conditions
+    ;; for c
+    ,@flex-autopair-c-conditions
+    ,@flex-autopair-user-conditions-low
+    ((and openp (flex-autopair-beginning-of-boundsp 'sexp)) . bounds)
+    ;; Insert matching pair.
+    (openp . pair)
+    ;; Skip self.
+    ((and closep flex-autopair-skip-self
+          (eq (char-after) last-command-event)) . skip)
+    (closep . self)
+    ;; Default is self-insert-command.
+    (t . self)
+    ))
+
+(defcustom flex-autopair-conditions
+  (flex-autopair-gen-conditions)
+  "Alist of conditions")
+
+(defun flex-autopair-reload-conditions ()
+  (interactive)
+  (setq flex-autopair-conditions
+        (flex-autopair-gen-conditions)))
+
+(defun flex-autopair-insert-before (lst index newelt)
+  (if (eq index 0)
+      (push newelt lst)
+    (push newelt (cdr (nthcdr (1- index) lst))))
+  lst)
+
+(defcustom flex-autopair-actions
+  '((self . (call-interactively 'self-insert-command))
+    (skip . (forward-char 1))
+    (pair . (progn (call-interactively 'self-insert-command)
+                   (save-excursion
+                     (insert closer))))
+    (bounds . (flex-autopair-wrap-region (car result)
+                                         (cdr result)
+                                         opener closer))
+    (bounds-and-space . (progn
+                          (flex-autopair-wrap-region (car result)
+                                                     (cdr result)
+                                                     opener closer)
+                          (insert " ")
+                          (backward-char 1)))
+    (space-and-pair . (progn (insert " ")
+                             (call-interactively 'self-insert-command)
+                             (save-excursion
+                               (insert closer))))
+    (space-self-space . (progn (if (flex-autopair-need-spacep)
+                                   (insert " " ))
+                               (call-interactively 'self-insert-command)
+                               (insert " ")
+                               ));; for key-combo
+    )
+  "Alist of actions")
 
 (defcustom flex-autopair-echo-actionp t
   "If t, echo which action was executed")
@@ -276,7 +294,6 @@ This can be convenient for people who find it easier to hit ) than C-f."
       )))
 
 (defun flex-autopair-post-command-function ()
-  (interactive)
   (let* ((syntax (and (eq (char-before) last-command-event) ; Sanity check.
                       flex-autopair-mode
                       (let ((x (assq last-command-event
