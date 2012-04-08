@@ -174,6 +174,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
           (memq major-mode flex-autopair-c-modes)) . space-self-space)
     ((and (eq last-command-event ?<)
           (memq major-mode flex-autopair-c-modes)) . self)
+    ((and (eq last-command-event ?{)
+          (memq major-mode flex-autopair-c-modes)) . pair-and-new-line)
     )
   "")
 
@@ -203,6 +205,27 @@ This can be convenient for people who find it easier to hit ) than C-f."
 
 (defcustom flex-autopair-user-conditions-low nil
   "Alist of conditions")
+
+(defun flex-autopair-smart-insert (string)
+  (let ((p (point)))
+    (insert string)
+    (if (eq ?  (aref string 0))
+        (save-excursion
+          (goto-char p)
+          (just-one-space)))
+    (when (string-match "\n" string)
+      (indent-according-to-mode)
+      (indent-region p (point)))))
+
+(defun flex-autopair-execute-macro (string)
+  (cond
+   ((string-match "`!!'" string)
+    (destructuring-bind (pre post) (split-string string "`!!'")
+      (flex-autopair-smart-insert pre)
+      (save-excursion
+        (flex-autopair-smart-insert post))
+      ))
+   (t (flex-autopair-smart-insert string))))
 
 (defun flex-autopair-gen-conditions ()
   `(((flex-autopair-escapedp) . self)
@@ -238,6 +261,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
   (setq flex-autopair-conditions
         (flex-autopair-gen-conditions)))
 
+(flex-autopair-reload-conditions)
+
 (defun flex-autopair-insert-before (lst index newelt)
   (if (eq index 0)
       (push newelt lst)
@@ -268,6 +293,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
                                (call-interactively 'self-insert-command)
                                (insert " ")
                                ));; for key-combo
+    (pair-and-new-line . (flex-autopair-execute-macro
+                          (format "%c\n`!!'\n%c" opener closer)))
     )
   "Alist of actions")
 
