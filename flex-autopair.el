@@ -155,7 +155,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
     ((and (eq last-command-event ?\()
           (memq major-mode flex-autopair-lisp-modes)) . pair)
     ((and (eq last-command-event ?`)
-          (flex-autopair-stringp)
+          (flex-autopair-docp)
           (memq major-mode flex-autopair-lisp-modes)) . pair)
     ((and (eq last-command-event ?`)
           (memq major-mode flex-autopair-lisp-modes)) . self)
