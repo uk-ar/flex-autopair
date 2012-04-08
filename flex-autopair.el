@@ -206,26 +206,24 @@ This can be convenient for people who find it easier to hit ) than C-f."
 (defcustom flex-autopair-user-conditions-low nil
   "Alist of conditions")
 
-(defun flex-autopair-smart-insert (string)
-  (let ((p (point)))
-    (insert string)
-    (if (eq ?  (aref string 0))
-        (save-excursion
-          (goto-char p)
-          (just-one-space)))
-    (when (string-match "\n" string)
-      (indent-according-to-mode)
-      (indent-region p (point)))))
-
 (defun flex-autopair-execute-macro (string)
   (cond
    ((string-match "`!!'" string)
     (destructuring-bind (pre post) (split-string string "`!!'")
-      (flex-autopair-smart-insert pre)
+      (flex-autopair-execute-macro pre)
       (save-excursion
-        (flex-autopair-smart-insert post))
+        (flex-autopair-execute-macro post))
       ))
-   (t (flex-autopair-smart-insert string))))
+   (t
+    (let ((p (point)))
+      (insert string)
+      (if (eq ?  (aref string 0))
+          (save-excursion
+            (goto-char p)
+            (just-one-space)))
+      (when (string-match "\n" string)
+        (indent-according-to-mode)
+        (indent-region p (point)))))))
 
 (defun flex-autopair-gen-conditions ()
   `(((flex-autopair-escapedp) . self)
