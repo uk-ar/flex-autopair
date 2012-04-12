@@ -179,6 +179,16 @@ This can be convenient for people who find it easier to hit ) than C-f."
     )
   "")
 
+(defcustom flex-autopair-functional-conditions
+  '(((and
+      (eq last-command-event ?`)
+      (memq major-mode flex-autopair-functional-modes)) . pair)
+    ((and
+      (eq last-command-event ?')
+      (memq major-mode flex-autopair-functional-modes)) . pair)
+    )
+  "")
+
 (defun flex-autopair-lisp-hook-function ()
   (add-to-list 'flex-autopair-pairs '(?` . ?')))
 
@@ -199,6 +209,21 @@ This can be convenient for people who find it easier to hit ) than C-f."
            c++-mode-hook
            objc-mode-hook))
   (add-hook hook 'flex-autopair-c-hook-function))
+
+
+(defcustom flex-autopair-functional-modes
+  '(coffee-mode-hook
+    haskell-mode-hook)
+  "")
+
+(defun flex-autopair-functional-hook-function ()
+  (add-to-list 'flex-autopair-pairs '(?\` . ?\`))
+  (add-to-list 'flex-autopair-pairs '(?' . ?')))
+
+(dolist (hook
+         '(coffee-mode-hook
+           haskell-mode-hook))
+  (add-hook hook 'flex-autopair-functional-hook-function))
 
 (defcustom flex-autopair-user-conditions-high nil
   "Alist of conditions")
@@ -238,6 +263,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
     ,@flex-autopair-lisp-conditions
     ;; for c
     ,@flex-autopair-c-conditions
+    ,@flex-autopair-functional-conditions
     ,@flex-autopair-user-conditions-low
     ((and openp (flex-autopair-beginning-of-boundsp 'sexp)) . bounds)
     ;; Insert matching pair.
