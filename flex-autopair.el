@@ -55,7 +55,7 @@
 ;; Code goes here
 (defcustom flex-autopair-pairs
   '((nil . nil))
-  "Alist of pairs that should be used regardless of major mode."
+  "Alist of pairs that should be used each major mode."
   :type '(repeat (cons character character)))
 ;; '((?\" . ?\"))
 (make-variable-buffer-local 'flex-autopair-pairs)
@@ -373,12 +373,11 @@ With a prefix argument ARG, enable Flex Autopair mode if ARG is
 positive, and disable it otherwise.  If called from Lisp, enable
 the mode if ARG is omitted or nil.
 
-Flex Autopair mode is a global minor mode.  When enabled, typing
+Flex Autopair mode is a minor mode.  When enabled, typing
 an open parenthesis automatically inserts the corresponding
 closing parenthesis.  \(Likewise for brackets, etc.)"
   :lighter " FA"
-  :global t
-  :group 'electricity
+  :group 'flex-autopair
   (if flex-autopair-mode
       (if (boundp 'post-self-insert-hook)
           (add-hook 'post-self-insert-hook
@@ -391,16 +390,46 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (remove-hook 'post-command-hook
                    #'flex-autopair-post-command-function))))
 
+(defcustom flex-autopair-disable-modes nil
+  "Major modes `flex-autopair-mode' can not run on.")
+
+;; copy from auto-complete-mode-maybe
+(defun flex-autopair-mode-maybe ()
+  "What buffer `flex-autopair-mode' prefers."
+  (when (and (not (minibufferp (current-buffer)))
+             (not (memq major-mode flex-autopair-disable-modes))
+             (flex-autopair-mode 1)
+             )))
+
+;; copy from global-auto-complete-mode
+;;;###autoload
+(define-global-minor-mode global-flex-autopair-mode
+  flex-autopair-mode flex-autopair-mode-maybe
+  ;; :init-value t bug?
+  :group 'flex-autopair)
+
+(global-flex-autopair-mode t)
 
 (dont-compile
   (when(fboundp 'expectations)
-    (flex-autopair-mode 1)
-    ;; (transient-mark-mode t)
+    ;; (flex-autopair-mode 1)
     (expectations
+      (desc "disable")
+      (expect '("'" 2)
+        (with-temp-buffer
+          (let ((flex-autopair-disable-modes '(emacs-lisp-mode)))
+            (emacs-lisp-mode)
+            (flex-autopair-mode-maybe))
+          (setq last-command-event ?')
+          (call-interactively 'self-insert-command)
+          (flex-autopair-post-command-function)
+          (list (buffer-string) (point))
+          ))
       (desc "for CoffeeScript")
       (expect '("''" 2)
         (with-temp-buffer
           (coffee-mode)
+          (flex-autopair-mode-maybe)
           (setq last-command-event ?')
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
@@ -409,6 +438,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("``" 2)
         (with-temp-buffer
           (coffee-mode)
+          (flex-autopair-mode-maybe)
           (setq last-command-event ?`)
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
@@ -418,6 +448,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("''" 2)
         (with-temp-buffer
           (haskell-mode)
+          (flex-autopair-mode-maybe)
           (setq last-command-event ?')
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
@@ -426,6 +457,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("a'" 3)
         (with-temp-buffer
           (haskell-mode)
+          (flex-autopair-mode-maybe)
           (insert "a")
           (setq last-command-event ?')
           (call-interactively 'self-insert-command)
@@ -435,6 +467,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("``" 2)
         (with-temp-buffer
           (haskell-mode)
+          (flex-autopair-mode-maybe)
           (setq last-command-event ?`)
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
@@ -444,6 +477,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("#include<>" 10)
         (with-temp-buffer
           (c-mode)
+          (flex-autopair-mode-maybe)
           (insert "#include")
           (setq last-command-event ?\<)
           (call-interactively 'self-insert-command)
@@ -453,6 +487,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("hoge < " 8)
         (with-temp-buffer
           (c-mode)
+          (flex-autopair-mode-maybe)
           (insert "hoge")
           (setq last-command-event ?\<)
           (call-interactively 'self-insert-command)
@@ -462,16 +497,19 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '(?< . ?>)
         (with-temp-buffer
           (c-mode)
+          (flex-autopair-mode-maybe)
           (assoc ?< flex-autopair-pairs)
           ))
       (expect nil
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (assoc ?< flex-autopair-pairs)
           ))
       (expect '("<" 2)
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (setq last-command-event ?\<)
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
@@ -479,6 +517,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ))
       (expect '("()" 2)
         (with-temp-buffer
+          (flex-autopair-mode 1)
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
@@ -497,6 +536,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (desc "japanese")
       (expect '("（）" 2);; japanese
         (with-temp-buffer
+          (flex-autopair-mode 1)
           (setq last-command-event ?\（)
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
@@ -506,6 +546,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
         (with-temp-buffer
           (save-excursion
             (insert "あ"))
+          (flex-autopair-mode 1)
           (setq last-command-event ?\（)
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
@@ -514,6 +555,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("a\"\"" 3)
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (insert "a")
           (setq last-command-event ?\")
           (call-interactively 'self-insert-command)
@@ -523,6 +565,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("a ()" 4)
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (insert "a")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
@@ -532,13 +575,16 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect t
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (font-lock-mode)
+          (flex-autopair-mode-maybe)
           (insert "a")
           (flex-autopair-openp ?\")
           ))
       (expect nil
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (insert "\"a")
           ;; fontify!!
           (font-lock-fontify-buffer)
@@ -547,6 +593,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect nil
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (insert "\"a ")
           (font-lock-fontify-buffer)
           (flex-autopair-openp ?\")
@@ -554,6 +601,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("\"a\"" 4)
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (insert "\"a")
           (font-lock-fontify-buffer)
           (setq last-command-event ?\")
@@ -564,6 +612,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("a()" 3)
         (with-temp-buffer
           (insert "a")
+          (flex-autopair-mode 1)
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
@@ -572,6 +621,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("'()" 3)
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (insert "'")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
@@ -581,6 +631,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect '("(())" 3)
         ;; (expect '("()" 2)
         (with-temp-buffer
+          (flex-autopair-mode 1)
           (insert "(")
           (save-excursion
             (insert ")"))
@@ -592,6 +643,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (desc "region")
       (expect "(word)"
         (with-temp-buffer
+          (flex-autopair-mode 1)
           (set-mark (point))
           (insert "word")
           (setq last-command-event ?\()
@@ -601,6 +653,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
         )
       (expect "(word)"
         (with-temp-buffer
+          (flex-autopair-mode 1)
           (set-mark (point))
           (insert "word")
           (exchange-point-and-mark)
@@ -620,6 +673,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ))
       (expect "((word))"
         (with-temp-buffer
+          (flex-autopair-mode 1)
           (save-excursion
             (insert "(word)"))
           (setq last-command-event ?\()
@@ -630,6 +684,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect "( (word))"
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (save-excursion
             (insert "(word)"))
           (setq last-command-event ?\()
@@ -641,6 +696,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
         (with-temp-buffer
           (save-excursion
             (insert "(word)"))
+          (flex-autopair-mode 1)
           (setq last-command-event ?\")
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function)
@@ -649,6 +705,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect "(http://example.com/index.html)"
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (save-excursion
             (insert "http://example.com/index.html"))
           (setq last-command-event ?\()
@@ -659,6 +716,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect "(\"http://example.com/index.html\")"
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (save-excursion
             (insert "(http://example.com/index.html)"))
           (goto-char 2)
@@ -670,6 +728,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect "( \"http://example.com/index.html\")"
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (save-excursion
             (insert "\"http://example.com/index.html\""))
           (setq last-command-event ?\()
@@ -680,6 +739,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect "( \"word\")"
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (save-excursion
             (insert "\"word\""))
           (setq last-command-event ?\()
@@ -689,6 +749,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ))
       (expect "(\"word\")"
         (with-temp-buffer
+          (flex-autopair-mode 1)
           (save-excursion
             (insert "\"word\""))
           (setq last-command-event ?\()
@@ -698,6 +759,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ))
       (expect "\"word\""
         (with-temp-buffer
+          (flex-autopair-mode 1)
           (set-mark (point))
           (insert "word")
           (setq last-command-event ?\")
@@ -716,6 +778,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (expect "\\\\ ()"
         (with-temp-buffer
           (emacs-lisp-mode)
+          (flex-autopair-mode-maybe)
           (insert "\\\\")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
@@ -724,6 +787,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ))
       (expect "\\\\()"
         (with-temp-buffer
+          (flex-autopair-mode 1)
           (insert "\\\\")
           (setq last-command-event ?\()
           (call-interactively 'self-insert-command)
@@ -732,6 +796,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           ))
       (expect '("()" 3)
         (with-temp-buffer
+          (flex-autopair-mode 1)
           (insert "(")
           (save-excursion
             (insert ")"))
