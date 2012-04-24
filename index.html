@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Flex-autopair : " />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Flex-autopair</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/uk-ar/flex-autopair">Fork Me on GitHub</a>
+
+          <h1 id="project_title">Flex-autopair</h1>
+          <h2 id="project_tagline"></h2>
+
+          <section id="downloads">
+            <a class="zip_download_link" href="https://github.com/uk-ar/flex-autopair/zipball/master">Download this project as a .zip file</a>
+            <a class="tar_download_link" href="https://github.com/uk-ar/flex-autopair/tarball/master">Download this project as a tar.gz file</a>
+          </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>Notice</h1>
+
+<pre><code>I'm not good at English.
+So please correct my English.
+</code></pre>
+
+<p>Flex Autopair automatically insert pair braces and quotes, insertion conditions &amp; actions are highly customizable.</p>
+
+<h1>Features</h1>
+
+<ul>
+<li>Less configuration: Auto detect pairs from syntax table.</li>
+<li>More customizable: Insertion conditions &amp; actions are highly customizable.</li>
+</ul><h1>Default setting</h1>
+
+<ul>
+<li>Auto insert matching pair(e.g. quote bracket paren)</li>
+<li>Undo can cancel only auto insertion</li>
+<li>Skip close pair when you press by mistake</li>
+<li>Wrap something(e.g. word symbol url) with pairs
+In c like languages and lisp languages have additional behavior. It is explained in demo video.</li>
+</ul><h1>Demo video</h1>
+
+
+
+<p>b</p>
+
+<p></p>
+
+<h1>Setup</h1>
+
+<p>You can install from github.</p>
+
+<div class="highlight">
+<pre><span class="p">(</span><span class="nv">auto-install-from-url</span> <span class="s">"https://raw.github.com/uk-ar/flex-autopair/master/flex-autopair.el"</span><span class="p">)</span>
+</pre>
+</div>
+
+
+<p>Or you can install from marmalade.</p>
+
+<pre><code>M-x package-install flex-autopair
+</code></pre>
+
+<p>Then modify your .emacs like this.</p>
+
+<div class="highlight">
+<pre><span class="p">(</span><span class="nb">require</span> <span class="ss">'flex-autopair</span><span class="p">)</span>
+<span class="p">(</span><span class="nv">flex-autopair-mode</span> <span class="mi">1</span><span class="p">)</span>
+</pre>
+</div>
+
+
+<h1>Customizing action in specific condition</h1>
+
+<p>You can highly customize Insertion conditions &amp; actions in this elisp. These behavior can be described by flex-autopair-conditions &amp; flex-autopair-actions variables.</p>
+
+<h2>flex-autopair-conditions</h2>
+
+<p>flex-autopair-conditions means conditions when inserting action should execute. This variable is a association list of conditional expressions vs corresponding action names(symbol). An ordinary element of the alist looks like (sexp . action-name)</p>
+
+<p>Here is the example code which is a part of default flex-autopair-conditions.</p>
+
+<div class="highlight">
+<pre><span class="p">(</span><span class="k">setq</span> <span class="nv">flex-autopair-conditions</span>
+      <span class="o">`</span><span class="p">(</span><span class="c1">;; Insert matching pair.</span>
+        <span class="p">(</span><span class="nv">openp</span> <span class="o">.</span> <span class="nv">pair</span><span class="p">)</span>
+        <span class="c1">;; Skip self.</span>
+        <span class="p">((</span><span class="nb">and</span> <span class="nv">closep</span>
+              <span class="p">(</span><span class="nb">eq</span> <span class="p">(</span><span class="nv">char-after</span><span class="p">)</span> <span class="nv">last-command-event</span><span class="p">))</span> <span class="o">.</span> <span class="nv">skip</span><span class="p">)</span>
+        <span class="p">(</span><span class="nv">closep</span> <span class="o">.</span> <span class="nv">self</span><span class="p">)</span>
+        <span class="p">))</span>
+</pre>
+</div>
+
+
+<p>flex-autopair.el searches flex-autopair-conditions for the first element in which conditional expression is true, then execute action of the element.
+In the setting show above behave like this</p>
+
+<ol>
+<li>Executing "pair" when you press open pair (open bracket, open paren, or open quote).</li>
+<li>Executing "skip" when you press close pair and the charactor at point is same as you press.</li>
+<li>Executing "self" when you press close pair and the other conditions.</li>
+</ol><p>openp is a variable which is set to t when you press open pair. closep is the opposite of openp: it is set to t if when you press close pair.</p>
+
+<p>Those actions(pair, skip, and self) are mapped to actual behavior by flex-autopair-actions.</p>
+
+<h2>flex-autopair-actions</h2>
+
+<p>This variable is a association list of action names(symbol) vs corresponding behavior(any S-expressions).An ordinary element of the alist looks like (action-name . sexp)</p>
+
+<p>Here is the example code which is a part of default flex-autopair-actions.</p>
+
+<div class="highlight">
+<pre><span class="p">(</span><span class="k">setq</span> <span class="nv">flex-autopair-actions</span>
+      <span class="o">'</span><span class="p">((</span><span class="nv">pair</span> <span class="o">.</span> <span class="p">(</span><span class="k">progn</span> <span class="p">(</span><span class="nv">call-interactively</span> <span class="ss">'self-insert-command</span><span class="p">)</span>
+                       <span class="p">(</span><span class="nv">save-excursion</span>
+                         <span class="p">(</span><span class="nv">insert</span> <span class="nv">closer</span><span class="p">))))</span>
+        <span class="p">(</span><span class="nv">skip</span> <span class="o">.</span> <span class="p">(</span><span class="nv">forward-char</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="p">(</span><span class="nv">self</span> <span class="o">.</span> <span class="p">(</span><span class="nv">call-interactively</span> <span class="ss">'self-insert-command</span><span class="p">))</span>
+        <span class="p">))</span>
+</pre>
+</div>
+
+
+<p>flex-autopair.el looks up action name in flex-autopair-actions, and evaluates its associated S expression.
+In the setting show above behave like this</p>
+
+<ul>
+<li>pair: Insert matching pair.</li>
+<li>skip: Only move forward one character.</li>
+<li>self: inserts the last character typed.
+You can add your setting in flex-autopair-conditions.</li>
+</ul><div class="highlight">
+<pre><span class="p">(</span><span class="k">setq</span> <span class="nv">flex-autopair-user-conditions-high</span>
+      <span class="o">`</span><span class="p">((</span><span class="nv">openp</span> <span class="o">.</span> <span class="nv">hoge</span><span class="p">)</span>
+        <span class="p">(</span><span class="nv">closep</span> <span class="o">.</span> <span class="nv">fuga</span><span class="p">)))</span>
+<span class="p">(</span><span class="nv">flex-autopair-reload-conditions</span><span class="p">)</span>
+</pre>
+</div>
+
+
+<p>flex-autopair-reload-conditions applies flex-autopair-user-conditions-high to flex-autopair-conditions with proper priority.
+And you can add your setting in flex-autopair-conditions.</p>
+
+<div class="highlight">
+<pre><span class="p">(</span><span class="nv">add-to-list</span>
+ <span class="ss">'flex-autopair-actions</span>
+ <span class="o">'</span><span class="p">(</span><span class="nv">hoge</span> <span class="o">.</span> <span class="p">(</span><span class="nv">message</span> <span class="s">"this is hoge"</span><span class="p">))</span>
+ <span class="p">)</span>
+</pre>
+</div>
+
+
+<h1>Adding pair charactor.</h1>
+
+<p>Flex-autopair automatically detect pairs from syntax table. But There are some situations in which you sometime want to insert pair, and others insert only you pressed. For example, "&lt;" should be treated as pair only after "#include" directive in C language.</p>
+
+<p>You can do this with the following steps.</p>
+
+<ol>
+<li>Adding new pair of charactor</li>
+<li>Adding condition of the pair.</li>
+<li>Adding new pair of charactor</li>
+</ol><p>flex-autopair-pairs is a association list of open pair charactor vs close pair charactor. An ordinary element of the alist looks like (?open-pair . ?close-pair). flex-autopair-pairs is   buffer local variable so that you can set pairs each major mode.</p>
+
+<p>Here is the example code which enables "&lt;" and "&gt;" pair in c-mode.</p>
+
+<div class="highlight">
+<pre><span class="p">(</span><span class="nb">defun</span> <span class="nv">my-hook-function</span> <span class="p">()</span>
+  <span class="p">(</span><span class="nv">add-to-list</span> <span class="ss">'flex-autopair-pairs</span> <span class="o">'</span><span class="p">(</span><span class="nv">?\&lt;</span> <span class="o">.</span> <span class="nv">?\&gt;</span><span class="p">)))</span>
+<span class="p">(</span><span class="nv">add-hook</span> <span class="ss">'c-mode-hook</span> <span class="ss">'my-hook-function</span><span class="p">)</span>
+</pre>
+</div>
+
+
+<h1>Adding conditions for the pair</h1>
+
+<p>Flex-autopair insert matching pair when you press open pair in the default setting. So you should add 2 settings for "&lt;" in c-mode.</p>
+
+<ol>
+<li>Executing "pair" when "#include" directive exist.</li>
+<li>Executing "self" when "#include" directive is not exist.
+Sample code is like this.</li>
+</ol><div class="highlight">
+<pre><span class="p">(</span><span class="k">setq</span> <span class="nv">flex-autopair-user-conditions-high</span>
+      <span class="o">`</span><span class="p">(((</span><span class="nb">and</span>
+          <span class="p">(</span><span class="nb">eq</span> <span class="nv">major-mode</span> <span class="ss">'c-mode</span><span class="p">)</span>
+          <span class="p">(</span><span class="nb">eq</span> <span class="nv">last-command-event</span> <span class="nv">?&lt;</span><span class="p">)</span>
+          <span class="p">(</span><span class="nv">save-excursion</span> <span class="p">(</span><span class="nv">re-search-backward</span> <span class="s">"#include"</span> <span class="p">(</span><span class="nv">point-at-bol</span><span class="p">)</span> <span class="no">t</span><span class="p">)))</span>
+         <span class="o">.</span> <span class="nv">pair</span><span class="p">)</span>
+        <span class="p">((</span><span class="nb">and</span>
+          <span class="p">(</span><span class="nb">eq</span> <span class="nv">major-mode</span> <span class="ss">'c-mode</span><span class="p">)</span>
+          <span class="p">(</span><span class="nb">eq</span> <span class="nv">last-command-event</span> <span class="nv">?&lt;</span><span class="p">))</span>
+         <span class="o">.</span> <span class="nv">self</span><span class="p">)</span>
+        <span class="p">))</span>
+<span class="p">(</span><span class="nv">flex-autopair-reload-conditions</span><span class="p">)</span>
+</pre>
+</div>
+
+
+<p>That's all.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Flex-autopair maintained by <a href="https://github.com/uk-ar">uk-ar</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
