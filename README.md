@@ -17,7 +17,8 @@ Flex Autopair automatically insert pair braces and quotes, insertion conditions 
 In c like languages and lisp languages have additional behavior. It is explained in demo video.
 
 # Demo video
-<object width="500" height="375"><param name="allowfullscreen" value="true" /><param name="allowscriptaccess" value="always" /><param name="movie" value="http://vimeo.com/moogaloop.swf?clip_id=39530265&amp;server=vimeo.com&amp;show_title=0&amp;show_byline=0&amp;show_portrait=0&amp;color=00adef&amp;fullscreen=1" /><embed src="http://vimeo.com/moogaloop.swf?clip_id=39530265&amp;server=vimeo.com&amp;show_title=0&amp;show_byline=0&amp;show_portrait=0&amp;color=00adef&amp;fullscreen=1" type="application/x-shockwave-flash" allowfullscreen="true" allowscriptaccess="always" width="500" height="375"></embed></object>
+
+<iframe src="http://player.vimeo.com/video/39530265" width="500" height="375" frameborder="0" webkitAllowFullScreen mozallowfullscreen allowFullScreen></iframe>
 
 # Setup
 You can install from github.
