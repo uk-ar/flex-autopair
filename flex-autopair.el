@@ -413,16 +413,34 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
   (unless (boundp 'post-self-insert-hook)
     (flex-autopair-post-command-function)
     ))
+
+(defun flex-autopair-test-command (mode command)
+  (with-temp-buffer
+    (funcall mode)
+    (flex-autopair-mode-maybe)
+    (setq last-command-event command)
+    (call-interactively 'self-insert-command)
+    (flex-autopair-post-command-function-helper)
+    (list
+     (buffer-substring-no-properties (point-min) (point-max))
+     (point))
+    ))
+
 (dont-compile
   (when(fboundp 'expectations)
     ;; (flex-autopair-mode 1)
     (expectations
-      (desc "disable")
+      (desc "c-mode")
+      (expect '("()" 2)
+        (flex-autopair-test-command 'c-mode ?\())
+      (expect '("{\n  \n}" 5)
+        (flex-autopair-test-command 'c-mode ?{))
+      (desc "disable by mode")
       (expect '("'" 2)
         (with-temp-buffer
           (let ((flex-autopair-disable-modes '(emacs-lisp-mode)))
-            (emacs-lisp-mode)
-            (flex-autopair-mode-maybe))
+            (emacs-lisp-mode))
+          (flex-autopair-mode)
           (setq last-command-event ?')
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function-helper)
@@ -844,5 +862,7 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
 ;; https://github.com/m2ym/auto-complete/issues/85
 ;; bug with python indent?
 ;; https://github.com/fgallina/python.el/issues/59
+;; todo:
+;; http://www.gnu.org/software/emacs/manual/html_node/elisp/Keyboard-Macros.html#Keyboard-Macros
 (provide 'flex-autopair)
 ;;; flex-autopair.el ends here
