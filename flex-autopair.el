@@ -135,101 +135,76 @@ This can be convenient for people who find it easier to hit ) than C-f."
            (eq (char-syntax (preceding-char)) ?');; case for quote '()
            (bolp))))
 
-
-(defcustom flex-autopair-lisp-modes
-  '(lisp-mode emacs-lisp-mode lisp-interaction-mode
-              inferior-gauche-mode scheme-mode)
-  "Major modes `flex-autopair-mode' treat ` as pair.")
-
 (defun flex-autopair-match-linep (regexp)
   (save-excursion (re-search-backward regexp (point-at-bol) t))
   )
 
 (defcustom flex-autopair-lisp-conditions
   '(((and (eq last-command-event ?\()
-          (memq major-mode flex-autopair-lisp-modes)
           (flex-autopair-beginning-of-boundsp 'sexp)) . bounds-and-space)
     ((and (eq last-command-event ?\()
-          (memq major-mode flex-autopair-lisp-modes)
           (flex-autopair-need-spacep)) . space-and-pair)
-    ((and (eq last-command-event ?\()
-          (memq major-mode flex-autopair-lisp-modes)) . pair)
+    ((eq last-command-event ?\() . pair)
     ((and (eq last-command-event ?`)
-          (flex-autopair-docp)
-          (memq major-mode flex-autopair-lisp-modes)) . pair)
-    ((and (eq last-command-event ?`)
-          (memq major-mode flex-autopair-lisp-modes)) . self)
+          (flex-autopair-docp)) . pair)
+    ((and (eq last-command-event ?`)) . self)
     )
   "")
 
 (defcustom flex-autopair-c-conditions
   '(((and (eq last-command-event ?<)
-          (memq major-mode flex-autopair-c-modes)
           (flex-autopair-match-linep
            "#include\\|#import|static_cast|dynamic_cast")) . pair)
     ;; work with key-combo
     ((and (eq last-command-event ?<)
           (boundp key-combo-mode)
-          (eq key-combo-mode t)
-          (memq major-mode flex-autopair-c-modes)) . space-self-space)
-    ((and (eq last-command-event ?<)
-          (memq major-mode flex-autopair-c-modes)) . self)
-    ((and (eq last-command-event ?{)
-          (memq major-mode flex-autopair-c-modes)) . pair-and-new-line)
+          (eq key-combo-mode t)) . space-self-space)
+    ((and (eq last-command-event ?<)) . self)
+    ((and (eq last-command-event ?{)) . pair-and-new-line)
     )
   "")
 
-(defcustom flex-autopair-functional-conditions
+(defcustom flex-autopair-singlequote-conditions
   '(((and
-      (eq last-command-event ?`)
-      (memq major-mode flex-autopair-functional-modes)) . pair)
-    ((and
       (eq last-command-event ?')
-      (memq major-mode flex-autopair-functional-modes)) . pair)
+      (eq ?w (char-syntax (preceding-char)))) . self)
+    ((and
+      (eq last-command-event ?')) . pair)
     )
   "")
-
-(defun flex-autopair-lisp-hook-function ()
-  (add-to-list 'flex-autopair-pairs '(?` . ?')))
-
-(dolist (hook
-         '(lisp-mode-hook emacs-lisp-mode-hook lisp-interaction-mode-hook
-                          inferior-gauche-mode-hook scheme-mode-hook))
-  (add-hook hook 'flex-autopair-lisp-hook-function))
-
-(defcustom flex-autopair-c-modes
-  '(c-mode c++mode objc-mode)
-  "Major modes `flex-autopair-mode' treat < as pair.")
-
-(defun flex-autopair-c-hook-function ()
-  (add-to-list 'flex-autopair-pairs '(?\< . ?\>)))
-
-(dolist (hook
-         '(c-mode-common-hook
-           c++-mode-hook
-           objc-mode-hook))
-  (add-hook hook 'flex-autopair-c-hook-function))
-
-
-(defcustom flex-autopair-functional-modes
-  '(coffee-mode-hook
-    haskell-mode-hook)
-  "")
-
-(defun flex-autopair-functional-hook-function ()
-  (add-to-list 'flex-autopair-pairs '(?\` . ?\`))
-  (add-to-list 'flex-autopair-pairs '(?' . ?')))
-
-(dolist (hook
-         '(coffee-mode-hook
-           haskell-mode-hook))
-  (add-hook hook 'flex-autopair-functional-hook-function))
 
 (defcustom flex-autopair-user-conditions-high nil
   "Alist of conditions")
+(make-variable-buffer-local 'flex-autopair-user-conditions-high)
 
 (defcustom flex-autopair-user-conditions-low nil
   "Alist of conditions")
+(make-variable-buffer-local 'flex-autopair-user-conditions-low)
+
+(defvar flex-autopair-default-conditions nil
+  "")
+(make-variable-buffer-local 'flex-autopair-default-conditions)
+
+(defun flex-autopair-haskell-mode-setup ()
+  (add-to-list 'flex-autopair-pairs '(?' . ?'))
+  (setq flex-autopair-default-conditions flex-autopair-singlequote-conditions)
+  (flex-autopair-reload-conditions)
+  )
+
+(defun flex-autopair-lisp-mode-setup ()
+  (add-to-list 'flex-autopair-pairs '(?` . ?'))
+  (setq flex-autopair-default-conditions flex-autopair-lisp-conditions)
+  (flex-autopair-reload-conditions)
+  )
+
+(defun flex-autopair-c-mode-setup ()
+  (add-to-list 'flex-autopair-pairs '(?< . ?>))
+  (setq flex-autopair-default-conditions flex-autopair-c-conditions)
+  (flex-autopair-reload-conditions)
+  )
+
+(defun flex-autopair-coffee-mode-setup ()
+  (add-to-list 'flex-autopair-pairs '(?` . ?`)))
 
 (defun flex-autopair-execute-macro (string)
   (cond
@@ -259,11 +234,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
     ;; ((and openp (flex-autopair-get-url)) . region);; symbol works better
     ((and openp (flex-autopair-beginning-of-boundsp 'symbol)) . bounds)
     ((and openp (flex-autopair-beginning-of-boundsp 'word)) . bounds)
-    ;; for lisp
-    ,@flex-autopair-lisp-conditions
-    ;; for c
-    ,@flex-autopair-c-conditions
-    ,@flex-autopair-functional-conditions
+    ,@flex-autopair-default-conditions
     ,@flex-autopair-user-conditions-low
     ((and openp (flex-autopair-beginning-of-boundsp 'sexp)) . bounds)
     ;; Insert matching pair.
@@ -276,16 +247,15 @@ This can be convenient for people who find it easier to hit ) than C-f."
     (t . self)
     ))
 
-(defcustom flex-autopair-conditions
+(defvar flex-autopair-conditions
   (flex-autopair-gen-conditions)
   "Alist of conditions")
+(make-variable-buffer-local 'flex-autopair-conditions)
 
 (defun flex-autopair-reload-conditions ()
   (interactive)
   (setq flex-autopair-conditions
         (flex-autopair-gen-conditions)))
-
-(flex-autopair-reload-conditions)
 
 (defun flex-autopair-insert-before (lst index newelt)
   (if (eq index 0)
@@ -407,7 +377,23 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
   ;; :init-value t bug?
   :group 'flex-autopair)
 
+;;default config
 (global-flex-autopair-mode t)
+
+(add-hook 'haskell-mode-hook
+          'flex-autopair-haskell-mode-setup)
+
+(dolist (hook '(lisp-mode-hook emacs-lisp-mode-hook lisp-interaction-mode-hook
+                               inferior-gauche-mode-hook scheme-mode-hook))
+  (add-hook hook
+            'flex-autopair-lisp-mode-setup))
+
+(dolist (hook '(c-mode-hook c++-mode-hook objc-mode-hook))
+  (add-hook hook
+            'flex-autopair-c-mode-setup))
+
+(add-hook 'coffee-mode-hook
+          'flex-autopair-coffee-mode-setup)
 
 (defun flex-autopair-post-command-function-helper ()
   (unless (boundp 'post-self-insert-hook)
