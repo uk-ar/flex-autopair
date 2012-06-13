@@ -26,7 +26,7 @@
 ;; Author: Yuuki Arisawa <yuuki.ari@gmail.com>
 ;; URL: https://github.com/uk-ar/flex-autopair.el
 ;; Created: 22 March 2012
-;; Version: 0.2
+;; Version: 0.3
 ;; Keywords: keyboard input
 
 ;;; Commentary:
@@ -44,6 +44,12 @@
 
 ;;; History:
 
+;; Revision 0.3 2012/06/13 22:25:33
+;; * Support Emacs 24. Bug reported by @masutaka.
+;; * Add setting to disable flex-autopair-mode in some major-mode. Requested by id:ril.
+;; * Make flex-autopair-conditions buffer-local.
+;; * Support haskell-mode and coffee-mode by @regluu503.
+;;
 ;; Revision 0.2 2012/04/01 18:27:46
 ;; * Make flex-autopair-pairs buffer-local.
 ;; * Add variable to enable echo.
