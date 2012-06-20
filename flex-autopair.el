@@ -39,7 +39,7 @@
 ;;
 ;; Add to your ~/.emacs
 ;;
-;; (require 'flex-autopair.el)
+;; (require 'flex-autopair)
 ;; (flex-autopair-mode 1)
 
 ;;; History:
