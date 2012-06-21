@@ -361,8 +361,8 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
                   'post-self-insert-hook
                 'post-command-hook)))
     (if flex-autopair-mode
-        (add-hook hook #'flex-autopair-post-command-function)
-      (remove-hook hook #'flex-autopair-post-command-function)
+        (add-hook hook #'flex-autopair-post-command-function nil t)
+      (remove-hook hook #'flex-autopair-post-command-function t)
       )))
 
 (defcustom flex-autopair-disable-modes nil
