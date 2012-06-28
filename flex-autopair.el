@@ -58,11 +58,13 @@
 ;; Revision 0.1 2012/03/22 06:18:19
 ;; * Initial revision
 
+(require 'cl)
 ;; Code goes here
 (defcustom flex-autopair-pairs
   '((nil . nil))
   "Alist of pairs that should be used each major mode."
-  :type '(repeat (cons character character)))
+  :type '(repeat (cons character character))
+  :group 'flex-autopair)
 ;; '((?\" . ?\"))
 (make-variable-buffer-local 'flex-autopair-pairs)
 
@@ -72,7 +74,8 @@ When inserting a closing paren character right before the same character,
 just skip that character instead, so that hitting ( followed by ) results
 in \"()\" rather than \"())\".
 This can be convenient for people who find it easier to hit ) than C-f."
-  :type 'boolean)
+  :type 'boolean
+  :group 'flex-autopair)
 
 (defun flex-autopair-wrap-region (beg end opener closer)
   (let ((marker (copy-marker end)))
@@ -155,7 +158,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
           (flex-autopair-docp)) . pair)
     ((and (eq last-command-event ?`)) . self)
     )
-  "")
+  ""
+  :group 'flex-autopair)
 
 (defcustom flex-autopair-c-conditions
   '(((and (eq last-command-event ?<)
@@ -168,7 +172,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
     ((and (eq last-command-event ?<)) . self)
     ((and (eq last-command-event ?{)) . pair-and-new-line)
     )
-  "")
+  ""
+  :group 'flex-autopair)
 
 (defcustom flex-autopair-singlequote-conditions
   '(((and
@@ -177,18 +182,23 @@ This can be convenient for people who find it easier to hit ) than C-f."
     ((and
       (eq last-command-event ?')) . pair)
     )
-  "")
+  ""
+  :group 'flex-autopair)
 
 (defcustom flex-autopair-user-conditions-high nil
-  "Alist of conditions")
+  "Alist of conditions"
+  :group 'flex-autopair)
 (make-variable-buffer-local 'flex-autopair-user-conditions-high)
 
 (defcustom flex-autopair-user-conditions-low nil
-  "Alist of conditions")
+  "Alist of conditions"
+  :group 'flex-autopair)
 (make-variable-buffer-local 'flex-autopair-user-conditions-low)
 
 (defvar flex-autopair-default-conditions nil
   "")
+
+  ;; :group 'flex-autopair)
 (make-variable-buffer-local 'flex-autopair-default-conditions)
 
 (defun flex-autopair-haskell-mode-setup ()
@@ -297,10 +307,12 @@ This can be convenient for people who find it easier to hit ) than C-f."
     (pair-and-new-line . (flex-autopair-execute-macro
                           (format "%c\n`!!'\n%c" opener closer)))
     )
-  "Alist of actions")
+  "Alist of actions"
+  :group 'flex-autopair)
 
 (defcustom flex-autopair-echo-actionp t
-  "If t, echo which action was executed")
+  "If t, echo which action was executed"
+  :group 'flex-autopair)
 
 (defun flex-autopair (syntax)
   (let*
@@ -326,25 +338,6 @@ This can be convenient for people who find it easier to hit ) than C-f."
               ) flex-autopair-conditions)
       )))
 
-(defun flex-autopair-post-command-function ()
-  (let* ((syntax (and (eq (char-before) last-command-event) ; Sanity check.
-                      flex-autopair-mode
-                      (let ((x (assq last-command-event
-                                     flex-autopair-pairs)))
-                        (cond
-                         (x (if (eq (car x) (cdr x)) ?\" ?\())
-                         ((rassq last-command-event flex-autopair-pairs)
-                          ?\))
-                         (t (char-syntax last-command-event)))))))
-    (cond ((and (memq syntax '(?\) ?\( ?\" ?\$)) ;; . is for c <
-                (not isearch-mode))
-           (undo-boundary)
-           ;; for Emacs 24
-           (let ((delete-active-region nil))
-             (delete-backward-char 1))
-           (flex-autopair syntax)))
-    ))
-
 ;;;###autoload
 (define-minor-mode flex-autopair-mode
   "Toggle automatic parens pairing (Flex Autopair mode).
@@ -365,8 +358,28 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
       (remove-hook hook #'flex-autopair-post-command-function t)
       )))
 
+(defun flex-autopair-post-command-function ()
+  (let* ((syntax (and (eq (char-before) last-command-event) ; Sanity check.
+                      flex-autopair-mode
+                      (let ((x (assq last-command-event
+                                     flex-autopair-pairs)))
+                        (cond
+                         (x (if (eq (car x) (cdr x)) ?\" ?\())
+                         ((rassq last-command-event flex-autopair-pairs)
+                          ?\))
+                         (t (char-syntax last-command-event)))))))
+    (cond ((and (memq syntax '(?\) ?\( ?\" ?\$)) ;; . is for c <
+                (not isearch-mode))
+           (undo-boundary)
+           ;; for Emacs 24
+           (let ((delete-active-region nil))
+             (delete-char -1))
+           (flex-autopair syntax)))
+    ))
+
 (defcustom flex-autopair-disable-modes nil
-  "Major modes `flex-autopair-mode' can not run on.")
+  "Major modes `flex-autopair-mode' can not run on."
+  :group 'flex-autopair)
 
 ;; copy from auto-complete-mode-maybe
 (defun flex-autopair-mode-maybe ()
