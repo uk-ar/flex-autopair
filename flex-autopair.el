@@ -90,18 +90,13 @@ This can be convenient for people who find it easier to hit ) than C-f."
     ))
 
 (defun flex-autopair-comment-or-stringp (&optional pos)
-  (setq pos (or pos (point)))
-  (memq (get-text-property pos 'face)
-        '(font-lock-comment-face font-lock-doc-face
-                                 font-lock-string-face
-                                 font-lock-comment-delimiter-face))
-  ;;(not (memq (char-syntax (following-char)) '(?\" ?\')))
+  (or (nth 3 (syntax-ppss))
+      (nth 4 (syntax-ppss)))
   )
 
 (defun flex-autopair-stringp (&optional pos)
-  (setq pos (or pos (point)))
-  (eq (get-text-property pos 'face)
-      font-lock-string-face))
+  (nth 3 (syntax-ppss))
+  )
 
 (defun flex-autopair-docp (&optional pos)
   (setq pos (or pos (point)))
@@ -135,7 +130,8 @@ This can be convenient for people who find it easier to hit ) than C-f."
   (and (not (eq syntax ?\)))
        (or (eq syntax ?\();; '(?\( ?\" ?\$)
            ;; FIXME: bug with temp buffer
-           (not (eq (get-text-property pos 'face) 'font-lock-string-face))
+           ;; in string?
+           (not (nth 3 (syntax-ppss)))
            )))
 
 (defun flex-autopair-need-spacep ()
