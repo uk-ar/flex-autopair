@@ -163,7 +163,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
            "#include\\|#import|static_cast|dynamic_cast")) . pair)
     ;; work with key-combo
     ((and (eq last-command-event ?<)
-          (boundp key-combo-mode)
+          (boundp 'key-combo-mode)
           (eq key-combo-mode t)) . space-self-space)
     ((and (eq last-command-event ?<)) . self)
     ((and (eq last-command-event ?{)) . pair-and-new-line)
