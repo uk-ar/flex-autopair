@@ -432,7 +432,8 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
     (describe ("flex-autopair in temp-buffer" :vars ((mode)))
       (shared-context ("execute" :vars (cmd))
         (around
-          (key-combo-mode -1)
+          (when (fboundp 'key-combo-mode)
+            (key-combo-mode -1))
           (flex-autopair-mode 1)
           (if cmd (execute-kbd-macro (read-kbd-macro cmd)))
           (funcall el-spec:example)))
