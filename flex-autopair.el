@@ -160,7 +160,7 @@ This can be convenient for people who find it easier to hit ) than C-f."
 (defcustom flex-autopair-c-conditions
   '(((and (eq last-command-event ?<)
           (flex-autopair-match-linep
-           "#include\\|#import|static_cast|dynamic_cast")) . pair)
+           "#include\\|#import\\|static_cast\\|dynamic_cast")) . pair)
     ;; work with key-combo
     ((and (eq last-command-event ?<)
           (boundp 'key-combo-mode)
@@ -447,7 +447,8 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
         (include-context "execute"))
       (around
         (global-flex-autopair-mode 1)
-        (global-key-combo-mode -1)
+        (when (fboundp 'global-key-combo-mode)
+          (global-key-combo-mode -1))
         (with-temp-buffer
           (switch-to-buffer (current-buffer))
           (if mode (funcall mode))
@@ -702,6 +703,10 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
             (should (string= (buffer-string) "#include<>"))
             (should (eq (point) 10))
             )
+          (it (:vars ((cmd "<") (pre-string "dynamic_cast")))
+            (should (string= (buffer-string) "dynamic_cast<>"))
+            (should (eq (point) 14))
+            )
           (it (:vars ((cmd "<") (pre-string "foo")))
             (should (eq key-combo-mode nil))
             (should (string= (buffer-string) "foo<"))
@@ -792,6 +797,16 @@ closing parenthesis.  \(Likewise for brackets, etc.)"
           (c-mode)
           (flex-autopair-mode-maybe)
           (insert "#include")
+          (setq last-command-event ?\<)
+          (call-interactively 'self-insert-command)
+          (flex-autopair-post-command-function-helper)
+          (list (buffer-string) (point))
+          ))
+      (expect '("dynamic_cast<>" 14)
+        (with-temp-buffer
+          (c-mode)
+          (flex-autopair-mode-maybe)
+          (insert "dynamic_cast")
           (setq last-command-event ?\<)
           (call-interactively 'self-insert-command)
           (flex-autopair-post-command-function-helper)
